@@ -1,0 +1,47 @@
+# Build
+bin/
+obj/
+
+# Visual Studio
+.vs/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# Rider
+.idea/
+
+# NuGet
+*.nupkg
+packages/
+
+# ASP.NET Core
+appsettings.Development.json
+appsettings.json
+# Environment / secrets
+.env
+.env.*
+!.env.example
+
+# User uploaded files
+Uploads/
+
+# Docker local data
+postgres-data/
+pgdata/
+
+# Logs
+*.log
+logs/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Swagger
+swagger.json
+
+# Temporary files
+*.tmp
+*.temp

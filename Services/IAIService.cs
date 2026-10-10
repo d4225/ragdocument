@@ -1,6 +1,6 @@
-﻿namespace SmartDocumentRAG.API.Services;
+namespace SmartDocumentRAG.API.Services;
 
-public interface IGeminiService
+public interface IAIService
 {
     Task<float[]> GetEmbeddingAsync(string text);
     Task<string> GenerateAnswerAsync(string prompt);

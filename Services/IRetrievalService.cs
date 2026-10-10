@@ -1,4 +1,4 @@
-﻿using SmartDocumentRAG.API.DTOs;
+using SmartDocumentRAG.API.DTOs;
 
 namespace SmartDocumentRAG.API.Services;
 

@@ -7,7 +7,7 @@ using Pgvector;
 namespace SmartDocumentRAG.API.Migrations
 {
     /// <inheritdoc />
-    public partial class InitialCreate : Migration
+    public partial class InitialRAGSchema : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -22,8 +22,10 @@ namespace SmartDocumentRAG.API.Migrations
                     Id = table.Column<Guid>(type: "uuid", nullable: false),
                     FileName = table.Column<string>(type: "character varying(255)", maxLength: 255, nullable: false),
                     FilePath = table.Column<string>(type: "text", nullable: false),
-                    UploadedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
-                    Status = table.Column<string>(type: "text", nullable: false)
+                    FileSize = table.Column<long>(type: "bigint", nullable: false),
+                    Status = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false),
+                    ErrorMessage = table.Column<string>(type: "text", nullable: true),
+                    UploadedAt = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -37,7 +39,8 @@ namespace SmartDocumentRAG.API.Migrations
                     Id = table.Column<Guid>(type: "uuid", nullable: false),
                     DocumentId = table.Column<Guid>(type: "uuid", nullable: false),
                     Content = table.Column<string>(type: "text", nullable: false),
-                    PageNumber = table.Column<int>(type: "integer", nullable: false)
+                    PageNumber = table.Column<int>(type: "integer", nullable: false),
+                    ChunkIndex = table.Column<int>(type: "integer", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -57,7 +60,8 @@ namespace SmartDocumentRAG.API.Migrations
                     Id = table.Column<Guid>(type: "uuid", nullable: false),
                     ParentChunkId = table.Column<Guid>(type: "uuid", nullable: false),
                     Content = table.Column<string>(type: "text", nullable: false),
-                    Embedding = table.Column<Vector>(type: "vector(768)", nullable: true)
+                    Embedding = table.Column<Vector>(type: "vector(768)", nullable: true),
+                    ChunkIndex = table.Column<int>(type: "integer", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -69,6 +73,13 @@ namespace SmartDocumentRAG.API.Migrations
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                 });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_ChildChunks_Embedding",
+                table: "ChildChunks",
+                column: "Embedding")
+                .Annotation("Npgsql:IndexMethod", "hnsw")
+                .Annotation("Npgsql:IndexOperators", new[] { "vector_cosine_ops" });
 
             migrationBuilder.CreateIndex(
                 name: "IX_ChildChunks_ParentChunkId",

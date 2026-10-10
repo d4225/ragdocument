@@ -13,8 +13,8 @@ using SmartDocumentRAG.API.Data;
 namespace SmartDocumentRAG.API.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20260929061041_AddUserTable")]
-    partial class AddUserTable
+    [Migration("20261010071052_InitialRAGSchema")]
+    partial class InitialRAGSchema
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -33,6 +33,9 @@ namespace SmartDocumentRAG.API.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
+                    b.Property<int>("ChunkIndex")
+                        .HasColumnType("integer");
+
                     b.Property<string>("Content")
                         .IsRequired()
                         .HasColumnType("text");
@@ -45,6 +48,11 @@ namespace SmartDocumentRAG.API.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("Embedding");
+
+                    NpgsqlIndexBuilderExtensions.HasMethod(b.HasIndex("Embedding"), "hnsw");
+                    NpgsqlIndexBuilderExtensions.HasOperators(b.HasIndex("Embedding"), new[] { "vector_cosine_ops" });
+
                     b.HasIndex("ParentChunkId");
 
                     b.ToTable("ChildChunks");
@@ -56,6 +64,9 @@ namespace SmartDocumentRAG.API.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
+                    b.Property<string>("ErrorMessage")
+                        .HasColumnType("text");
+
                     b.Property<string>("FileName")
                         .IsRequired()
                         .HasMaxLength(255)
@@ -65,19 +76,18 @@ namespace SmartDocumentRAG.API.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<long>("FileSize")
+                        .HasColumnType("bigint");
+
                     b.Property<string>("Status")
                         .IsRequired()
-                        .HasColumnType("text");
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
 
-                    b.Property<DateTime>("UploadedAt")
+                    b.Property<DateTimeOffset>("UploadedAt")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<Guid>("UserId")
-                        .HasColumnType("uuid");
-
                     b.HasKey("Id");
-
-                    b.HasIndex("UserId");
 
                     b.ToTable("Documents");
                 });
@@ -87,6 +97,9 @@ namespace SmartDocumentRAG.API.Migrations
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
+
+                    b.Property<int>("ChunkIndex")
+                        .HasColumnType("integer");
 
                     b.Property<string>("Content")
                         .IsRequired()
@@ -105,39 +118,6 @@ namespace SmartDocumentRAG.API.Migrations
                     b.ToTable("ParentChunks");
                 });
 
-            modelBuilder.Entity("SmartDocumentRAG.API.Models.User", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("Email")
-                        .IsRequired()
-                        .HasMaxLength(255)
-                        .HasColumnType("character varying(255)");
-
-                    b.Property<string>("PasswordHash")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<string>("Role")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)");
-
-                    b.Property<string>("Username")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("Users");
-                });
-
             modelBuilder.Entity("SmartDocumentRAG.API.Models.ChildChunk", b =>
                 {
                     b.HasOne("SmartDocumentRAG.API.Models.ParentChunk", "ParentChunk")
@@ -147,17 +127,6 @@ namespace SmartDocumentRAG.API.Migrations
                         .IsRequired();
 
                     b.Navigation("ParentChunk");
-                });
-
-            modelBuilder.Entity("SmartDocumentRAG.API.Models.Document", b =>
-                {
-                    b.HasOne("SmartDocumentRAG.API.Models.User", "User")
-                        .WithMany("Documents")
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("SmartDocumentRAG.API.Models.ParentChunk", b =>
@@ -179,11 +148,6 @@ namespace SmartDocumentRAG.API.Migrations
             modelBuilder.Entity("SmartDocumentRAG.API.Models.ParentChunk", b =>
                 {
                     b.Navigation("ChildChunks");
-                });
-
-            modelBuilder.Entity("SmartDocumentRAG.API.Models.User", b =>
-                {
-                    b.Navigation("Documents");
                 });
 #pragma warning restore 612, 618
         }

@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
+using NpgsqlTypes;
 using Pgvector;
 using SmartDocumentRAG.API.Data;
 
@@ -24,6 +25,54 @@ namespace SmartDocumentRAG.API.Migrations
             NpgsqlModelBuilderExtensions.HasPostgresExtension(modelBuilder, "vector");
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("SmartDocumentRAG.API.Models.ChatMessage", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("ChatSessionId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("CitationsJson")
+                        .HasColumnType("text");
+
+                    b.Property<string>("Content")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Sender")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ChatSessionId");
+
+                    b.ToTable("ChatMessages");
+                });
+
+            modelBuilder.Entity("SmartDocumentRAG.API.Models.ChatSession", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("ChatSessions");
+                });
+
             modelBuilder.Entity("SmartDocumentRAG.API.Models.ChildChunk", b =>
                 {
                     b.Property<Guid>("Id")
@@ -39,6 +88,11 @@ namespace SmartDocumentRAG.API.Migrations
 
                     b.Property<Guid>("ParentChunkId")
                         .HasColumnType("uuid");
+
+                    b.Property<NpgsqlTsVector>("SearchVector")
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("tsvector");
 
                     b.HasKey("Id");
 
@@ -135,6 +189,17 @@ namespace SmartDocumentRAG.API.Migrations
                     b.ToTable("Users");
                 });
 
+            modelBuilder.Entity("SmartDocumentRAG.API.Models.ChatMessage", b =>
+                {
+                    b.HasOne("SmartDocumentRAG.API.Models.ChatSession", "ChatSession")
+                        .WithMany("Messages")
+                        .HasForeignKey("ChatSessionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("ChatSession");
+                });
+
             modelBuilder.Entity("SmartDocumentRAG.API.Models.ChildChunk", b =>
                 {
                     b.HasOne("SmartDocumentRAG.API.Models.ParentChunk", "ParentChunk")
@@ -166,6 +231,11 @@ namespace SmartDocumentRAG.API.Migrations
                         .IsRequired();
 
                     b.Navigation("Document");
+                });
+
+            modelBuilder.Entity("SmartDocumentRAG.API.Models.ChatSession", b =>
+                {
+                    b.Navigation("Messages");
                 });
 
             modelBuilder.Entity("SmartDocumentRAG.API.Models.Document", b =>

@@ -4,4 +4,5 @@ public interface IGeminiService
 {
     Task<float[]> GetEmbeddingAsync(string text);
     Task<string> GenerateAnswerAsync(string prompt);
+    IAsyncEnumerable<string> StreamAnswerAsync(string prompt);
 }

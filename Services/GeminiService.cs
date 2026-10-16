@@ -140,4 +140,70 @@ public class GeminiService : IGeminiService
         throw new Exception("Yêu cầu bị quá thời gian chờ (Timeout). Vui lòng thử lại với câu hỏi ngắn hơn.");
     }
 }
+    public async IAsyncEnumerable<string> StreamAnswerAsync(string prompt)
+    {
+        var rawModel = string.IsNullOrWhiteSpace(_chatModel) ? "gemini-3.5-flash" : _chatModel;
+        rawModel = rawModel.Replace("models/", "").Trim();
+
+        // Dùng endpoint streamGenerateContent thay vì generateContent
+        var url = $"https://generativelanguage.googleapis.com/v1beta/models/{rawModel}:streamGenerateContent?alt=sse&key={_apiKey}";
+
+        var requestBody = new
+        {
+            contents = new[]
+            {
+            new { parts = new[] { new { text = prompt } } }
+        },
+            generationConfig = new
+            {
+                temperature = 0.2,
+                maxOutputTokens = 2048
+            }
+        };
+
+        var jsonContent = new StringContent(
+            JsonSerializer.Serialize(requestBody),
+            Encoding.UTF8,
+            "application/json"
+        );
+
+        using var httpRequest = new HttpRequestMessage(HttpMethod.Post, url) { Content = jsonContent };
+        using var response = await _httpClient.SendAsync(httpRequest, HttpCompletionOption.ResponseHeadersRead);
+
+        if (!response.IsSuccessStatusCode)
+        {
+            var errorText = await response.Content.ReadAsStringAsync();
+            throw new Exception($"Lỗi Gemini Stream API ({response.StatusCode}): {errorText}");
+        }
+
+        using var stream = await response.Content.ReadAsStreamAsync();
+        using var reader = new StreamReader(stream);
+
+        while (!reader.EndOfStream)
+        {
+            var line = await reader.ReadLineAsync();
+            if (string.IsNullOrWhiteSpace(line)) continue;
+
+            // Dòng SSE từ Gemini bắt đầu bằng "data: "
+            if (line.StartsWith("data: "))
+            {
+                var jsonStr = line.Substring(6).Trim();
+
+                using var doc = JsonDocument.Parse(jsonStr);
+                var candidates = doc.RootElement.GetProperty("candidates");
+                if (candidates.GetArrayLength() > 0)
+                {
+                    var parts = candidates[0].GetProperty("content").GetProperty("parts");
+                    if (parts.GetArrayLength() > 0)
+                    {
+                        var text = parts[0].GetProperty("text").GetString();
+                        if (!string.IsNullOrEmpty(text))
+                        {
+                            yield return text;
+                        }
+                    }
+                }
+            }
+        }
+    }
 }

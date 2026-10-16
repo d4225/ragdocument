@@ -1,137 +1,118 @@
 ﻿using System.Text;
+using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using SmartDocumentRAG.API.Data;
 using SmartDocumentRAG.API.DTOs;
+using SmartDocumentRAG.API.Models;
 
 namespace SmartDocumentRAG.API.Services;
 
 public class ChatRAGService : IChatRAGService
 {
+    private readonly ApplicationDbContext _db;
     private readonly IRetrievalService _retrievalService;
     private readonly IGeminiService _geminiService;
-    private readonly ApplicationDbContext _db;
 
     public ChatRAGService(
+        ApplicationDbContext db,
         IRetrievalService retrievalService,
-        IGeminiService geminiService,
-        ApplicationDbContext db)
+        IGeminiService geminiService)
     {
+        _db = db;
         _retrievalService = retrievalService;
         _geminiService = geminiService;
-        _db = db;
     }
 
     public async Task<ChatResponseDto> AskQuestionAsync(ChatRequestDto request)
     {
-        // 1. Hybrid Search
-        var searchResults = await _retrievalService
-            .HybridSearchAsync(request.Question, request.TopK);
-
-        if (!searchResults.Any())
+        // 1. Quản lý Session
+        ChatSession session;
+        if (!request.SessionId.HasValue || request.SessionId == Guid.Empty)
         {
-            return new ChatResponseDto
+            session = new ChatSession
             {
-                Answer = "Tôi không tìm thấy thông tin phù hợp trong tài liệu để trả lời câu hỏi của bạn.",
-                Citations = new List<CitationDto>()
+                Title = request.Question.Length > 30 ? request.Question.Substring(0, 30) + "..." : request.Question
             };
+            _db.ChatSessions.Add(session);
+            await _db.SaveChangesAsync();
         }
-
-        // 2. Lấy danh sách ParentChunk duy nhất
-        var parentChunkIds = searchResults
-            .Select(r => r.ParentChunkId)
-            .Distinct()
-            .ToList();
-
-        var parentDetails = await _db.ParentChunks
-            .Include(p => p.Document)
-            .Where(p => parentChunkIds.Contains(p.Id))
-            .ToDictionaryAsync(p => p.Id);
-
-        // 3. Xây dựng Context + Citations
-        var contextBuilder = new StringBuilder();
-        var citations = new List<CitationDto>();
-
-        int index = 1;
-
-        // Chỉ xử lý mỗi ParentChunk một lần
-        foreach (var result in searchResults
-            .GroupBy(r => r.ParentChunkId)
-            .Select(g => g.First()))
+        else
         {
-            if (!parentDetails.TryGetValue(
-                result.ParentChunkId,
-                out var parentChunk))
-            {
-                continue;
-            }
-
-            string docName =
-                parentChunk.Document?.FileName
-                ?? "Tài liệu không xác định";
-
-            Guid docId = parentChunk.DocumentId;
-
-            // Thêm Context
-            contextBuilder.AppendLine(
-                $"--- NGUỒN TRÍCH DẪN [{index}] ---");
-
-            contextBuilder.AppendLine(
-                $"Tên tài liệu: {docName}");
-
-            contextBuilder.AppendLine(
-                $"Trang: {parentChunk.PageNumber}");
-
-            contextBuilder.AppendLine(
-                $"Nội dung: {parentChunk.Content}");
-
-            contextBuilder.AppendLine();
-
-            // Citation
-            citations.Add(new CitationDto
-            {
-                DocumentId = docId,
-                DocumentName = docName,
-                PageNumber = parentChunk.PageNumber,
-                Snippet = parentChunk.Content.Length > 150
-                    ? parentChunk.Content.Substring(0, 150) + "..."
-                    : parentChunk.Content
-            });
-
-            index++;
+            session = await _db.ChatSessions
+                .Include(s => s.Messages.OrderByDescending(m => m.CreatedAt).Take(6))
+                .FirstOrDefaultAsync(s => s.Id == request.SessionId.Value)
+                ?? throw new Exception("Không tìm thấy phiên trò chuyện.");
         }
 
-        // 4. Xây dựng Prompt cho Gemini
-        string systemPrompt = $@"
-Bạn là trợ lý hỏi đáp tài liệu.
+        // 2. Lấy 6 tin nhắn gần nhất làm History
+        var recentMessages = session.Messages.OrderBy(m => m.CreatedAt).ToList();
 
-Hãy trả lời câu hỏi của người dùng dựa CHỈ vào thông tin trong CONTEXT.
+        // 3. Chạy Hybrid Search tìm Chunks liên quan
+        var topChunks = await _retrievalService.GetRelevantParentChunksAsync(request.Question, topK: request.TopK);
 
-YÊU CẦU:
-- Chỉ sử dụng thông tin có trong CONTEXT.
-- Không tự suy đoán hoặc thêm thông tin không có trong CONTEXT.
-- Trả lời ngắn gọn, chính xác và dễ hiểu.
-- Nếu CONTEXT không chứa thông tin để trả lời, hãy trả lời đúng câu:
-  ""Tài liệu không đề cập"".
-- Không cần nhắc lại toàn bộ CONTEXT.
-- Không tạo nguồn trích dẫn mới ngoài các nguồn được cung cấp.
+        // 4. Dựng Prompt bao gồm Context + Chat History
+        var historyBuilder = new StringBuilder();
+        foreach (var msg in recentMessages)
+        {
+            var role = msg.Sender == "user" ? "Người dùng" : "Trợ lý AI";
+            historyBuilder.AppendLine($"{role}: {msg.Content}");
+        }
 
-CONTEXT:
-{contextBuilder}
+        var contextBuilder = new StringBuilder();
+        foreach (var chunk in topChunks)
+        {
+            var fileName = chunk.Document?.FileName ?? "Tài liệu";
+            contextBuilder.AppendLine($"--- Nguồn: {fileName} ---");
+            contextBuilder.AppendLine(chunk.Content);
+            contextBuilder.AppendLine();
+        }
 
-CÂU HỎI:
-{request.Question}
+        var systemPrompt = $"""
+            Bạn là trợ lý AI chuyên phân tích văn bản. Trả lời câu hỏi dựa trên CONTEXT được cung cấp.
+            Nếu thông tin không nằm trong Context, hãy lịch sự trả lời "Tài liệu không đề cập".
 
-CÂU TRẢ LỜI:
-";
+            LỊCH SỬ TRÒ CHUYỆN GẦN ĐÂY:
+            {historyBuilder}
+
+            CONTEXT TÀI LIỆU:
+            {contextBuilder}
+
+            CÂU HỎI HIỆN TẠI:
+            {request.Question}
+            """;
 
         // 5. Gọi Gemini
-        string aiAnswer =
-            await _geminiService.GenerateAnswerAsync(systemPrompt);
+        var answer = await _geminiService.GenerateAnswerAsync(systemPrompt);
 
-        // 6. Trả kết quả
+        // 6. Lưu câu hỏi & câu trả lời vào ChatMessage Table
+        var userMsg = new ChatMessage
+        {
+            ChatSessionId = session.Id,
+            Sender = "user",
+            Content = request.Question
+        };
+
+        var citations = topChunks.Select(c => new CitationDto
+        {
+            DocumentName = c.Document?.FileName ?? "Tài liệu",
+            Snippet = c.Content.Length > 150 ? c.Content.Substring(0, 150) + "..." : c.Content
+        }).ToList();
+
+        var aiMsg = new ChatMessage
+        {
+            ChatSessionId = session.Id,
+            Sender = "assistant",
+            Content = answer,
+            CitationsJson = JsonSerializer.Serialize(citations)
+        };
+
+        _db.ChatMessages.AddRange(userMsg, aiMsg);
+        await _db.SaveChangesAsync();
+
         return new ChatResponseDto
         {
-            Answer = aiAnswer,
+            SessionId = session.Id,
+            Answer = answer,
             Citations = citations
         };
     }

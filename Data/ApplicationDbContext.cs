@@ -11,7 +11,8 @@ public class ApplicationDbContext : DbContext
     public DbSet<Document> Documents => Set<Document>();
     public DbSet<ParentChunk> ParentChunks => Set<ParentChunk>();
     public DbSet<ChildChunk> ChildChunks => Set<ChildChunk>();
-
+    public DbSet<ChatSession> ChatSessions { get; set; }
+    public DbSet<ChatMessage> ChatMessages { get; set; }
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);

@@ -27,200 +27,126 @@ public class RetrievalService : IRetrievalService
 
 
 
-    public async Task<List<SearchResultDto>> HybridSearchAsync(string query, int topK = 5)
-
+    public async Task<List<SearchResultDto>> HybridSearchAsync(string query, int topK = 5, List<Guid>? documentIds = null)
     {
-
         if (string.IsNullOrWhiteSpace(query)) return new List<SearchResultDto>();
 
-
-
-        // 1. Vector Search: Sinh embedding cho câu query của user
-
         float[] queryEmbedding = await _geminiService.GetEmbeddingAsync(query);
-
         var vectorQuery = new Pgvector.Vector(queryEmbedding);
 
+        // ==========================================
+        // 1. VECTOR SEARCH (Cosine Distance) có lọc DocumentIds
+        // ==========================================
+        var vectorQueryable = _db.ChildChunks
+            .Include(c => c.ParentChunk)
+            .ThenInclude(p => p.Document)
+            .AsQueryable();
 
-
-        // Lấy Top 20 theo Cosine Distance (vector_cosine_ops)
-
-        var vectorResults = await _db.ChildChunks
-
-        .Select(c => new
-
+        // Nếu có truyền danh sách file cụ thể, tiến hành lọc
+        if (documentIds != null && documentIds.Any())
         {
+            vectorQueryable = vectorQueryable.Where(c => documentIds.Contains(c.ParentChunk.DocumentId));
+        }
 
-            c.Id,
+        var vectorResults = await vectorQueryable
+            .Select(c => new
+            {
+                ChildChunk = c,
+                Distance = c.Embedding.CosineDistance(vectorQuery)
+            })
+            .OrderBy(c => c.Distance)
+            .Take(20)
+            .ToListAsync();
 
-            c.ParentChunkId,
+        // ==========================================
+        // 2. KEYWORD SEARCH (Full-Text Search) có lọc DocumentIds
+        // ==========================================
+        var keywordQueryable = _db.ChildChunks
+            .Include(c => c.ParentChunk)
+            .ThenInclude(p => p.Document)
+            .AsQueryable();
 
-            c.Content,
-
-            Distance = c.Embedding.CosineDistance(vectorQuery)
-
-        })
-
-        .OrderBy(c => c.Distance)
-
-        .Take(20)
-
-        .ToListAsync();
-
-
-
-        // 2. Keyword Search: Full-Text Search trên PostgreSQL
-
-        // Dùng EF.Functions.ToTsQuery hoặc EF.Functions.WebSearchToTsQuery
-
-        var keywordResults = await _db.ChildChunks
-
-        .Where(c => c.SearchVector.Matches(EF.Functions.WebSearchToTsQuery("english", query)))
-
-        .Take(20)
-
-        .Select(c => new
-
+        if (documentIds != null && documentIds.Any())
         {
+            keywordQueryable = keywordQueryable.Where(c => documentIds.Contains(c.ParentChunk.DocumentId));
+        }
 
-            c.Id,
+        var keywordResults = await keywordQueryable
+            .Where(c => c.SearchVector.Matches(EF.Functions.WebSearchToTsQuery("english", query)))
+            .Take(20)
+            .Select(c => new
+            {
+                ChildChunk = c
+            })
+            .ToListAsync();
 
-            c.ParentChunkId,
+        // ==========================================
+        // 3. KẾT HỢP BẰNG THUẬT TOÁN RRF (Reciprocal Rank Fusion)
+        // ==========================================
+        var rrfScores = new Dictionary<Guid, (ChildChunk Chunk, double Score)>();
+        const double k = 60.0;
 
-            c.Content
-
-        })
-
-        .ToListAsync();
-
-
-
-        // 3. Kết hợp kết quả bằng Reciprocal Rank Fusion (RRF)
-
-        var scoreDict = new Dictionary<Guid, double>();
-
-        var childChunkMap = new Dictionary<Guid, (Guid ParentId, string Content)>();
-
-
-
-        int k = 60; // Hằng số RRF chuẩn
-
-
-
-        // Tính rank cho Vector Search
-
+        // Tính điểm RRF cho Vector Search
         for (int i = 0; i < vectorResults.Count; i++)
-
         {
-
             var item = vectorResults[i];
-
             double rrfScore = 1.0 / (k + (i + 1));
-
-
-
-            scoreDict[item.Id] = scoreDict.GetValueOrDefault(item.Id, 0) + rrfScore;
-
-            childChunkMap[item.Id] = (item.ParentChunkId, item.Content);
-
+            rrfScores[item.ChildChunk.Id] = (item.ChildChunk, rrfScore);
         }
 
-
-
-        // Tính rank cho Keyword Search
-
+        // Cộng điểm RRF cho Keyword Search
         for (int i = 0; i < keywordResults.Count; i++)
-
         {
-
             var item = keywordResults[i];
-
             double rrfScore = 1.0 / (k + (i + 1));
-
-
-
-            scoreDict[item.Id] = scoreDict.GetValueOrDefault(item.Id, 0) + rrfScore;
-
-            childChunkMap[item.Id] = (item.ParentChunkId, item.Content);
-
+            if (rrfScores.ContainsKey(item.ChildChunk.Id))
+            {
+                var existing = rrfScores[item.ChildChunk.Id];
+                rrfScores[item.ChildChunk.Id] = (existing.Chunk, existing.Score + rrfScore);
+            }
+            else
+            {
+                rrfScores[item.ChildChunk.Id] = (item.ChildChunk, rrfScore);
+            }
         }
 
+        // Lấy topK kết quả tốt nhất sau khi gộp Hybrid Search
+        var topChildChunks = rrfScores.Values
+            .OrderByDescending(x => x.Score)
+            .Take(topK)
+            .Select(x => x.Chunk)
+            .ToList();
 
+        // Chuyển đổi sang DTO trả về
+        return topChildChunks.Select(c => new SearchResultDto
+        {
+            ChildChunkId = c.Id,
+            ParentChunkId = c.ParentChunkId,
+            ChildContent = c.Content,
+            ParentContent = c.ParentChunk?.Content,
+            PageNumber = c.ParentChunk?.PageNumber ?? 0,
+            DocumentName = c.ParentChunk?.Document?.FileName ?? "Tài liệu",
+            Score = rrfScores[c.Id].Score
+        }).ToList();
+    }
 
-        // Lấy Top K ChildChunk có RRF Score cao nhất
-
-        var topChildIds = scoreDict
-
-        .OrderByDescending(kv => kv.Value)
-
-        .Take(topK)
-
-        .Select(kv => kv.Key)
-
-        .ToList();
-
-
-
-        // 4. Cơ chế Parent Retrieval: Từ Top Child Chunks -> Lấy ParentChunk đầy đủ
-
-        var parentIds = topChildIds
-
-        .Select(id => childChunkMap[id].ParentId)
-
-        .Distinct()
-
-        .ToList();
-
-
+    // Cập nhật luôn phương thức lấy Parent Chunks tương tự
+    public async Task<List<ParentChunk>> GetRelevantParentChunksAsync(string query, int topK = 5, List<Guid>? documentIds = null)
+    {
+        var searchResults = await HybridSearchAsync(query, topK, documentIds);
+        var parentChunkIds = searchResults.Select(r => r.ParentChunkId).Distinct().ToList();
 
         var parentChunks = await _db.ParentChunks
+            .Include(p => p.Document)
+            .Where(p => parentChunkIds.Contains(p.Id))
+            .ToListAsync();
 
-        .Where(p => parentIds.Contains(p.Id))
-
-        .ToDictionaryAsync(p => p.Id);
-
-
-
-        // 5. Đóng gói kết quả DTO
-
-        var finalResults = new List<SearchResultDto>();
-
-        foreach (var childId in topChildIds)
-
-        {
-
-            var (parentId, childContent) = childChunkMap[childId];
-
-            if (parentChunks.TryGetValue(parentId, out var parentChunk))
-
-            {
-
-                finalResults.Add(new SearchResultDto
-
-                {
-
-                    ChildChunkId = childId,
-
-                    ParentChunkId = parentId,
-
-                    ChildContent = childContent,
-
-                    ParentContent = parentChunk.Content, // Trả về nội dung lớn (Parent)
-
-                    PageNumber = parentChunk.PageNumber,
-
-                    Score = scoreDict[childId]
-
-                });
-
-            }
-
-        }
-
-
-
-        return finalResults;
-
+        // Sắp xếp lại theo đúng thứ tự điểm RRF
+        return parentChunkIds
+            .Select(id => parentChunks.FirstOrDefault(p => p.Id == id))
+            .Where(p => p != null)
+            .Cast<ParentChunk>()
+            .ToList();
     }
 
     public async Task<List<ParentChunk>> GetRelevantParentChunksAsync(string query, int topK = 4)

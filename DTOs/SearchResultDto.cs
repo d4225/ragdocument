@@ -8,4 +8,5 @@ public class SearchResultDto
     public string ParentContent { get; set; } = string.Empty;
     public int PageNumber { get; set; }
     public double Score { get; set; }
+    public string DocumentName { get; set; } = string.Empty;
 }

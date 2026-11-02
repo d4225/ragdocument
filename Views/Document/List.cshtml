@@ -1,0 +1,530 @@
+﻿@model List<SmartDocumentRAG.API.Models.Document>
+
+@{
+    Layout = "_Layout";
+    ViewData["Title"] = "Tài liệu của tôi";
+    var totalDocs = Model?.Count ?? 0;
+    var completedDocs = Model?.Count(d => d.Status == "Completed") ?? 0;
+    var processingDocs = totalDocs - completedDocs;
+    var currentUsername = Context.Session.GetString("Username") ?? "Người dùng";
+}
+
+<style>
+    /* 1. KHUNG CHỨA TOÀN TRANG DANH SÁCH */
+    .list-page-container {
+        max-width: 1360px;
+        margin: 0 auto;
+        padding: 20px 28px 48px 28px;
+    }
+
+    @@media (max-width: 768px) {
+        .list-page-container {
+            padding: 14px 14px 36px 14px;
+        }
+    }
+
+    /* 2. HEADER TRANG & NÚT TẢI LÊN */
+    .page-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-end;
+        flex-wrap: wrap;
+        gap: 16px;
+        padding-bottom: 18px;
+        margin-bottom: 24px;
+        border-bottom: 1.5px solid var(--color-card-border);
+    }
+
+    .page-title {
+        font-size: 1.8rem;
+        font-weight: 700;
+        color: var(--color-teal-dark);
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin: 0;
+    }
+
+        .page-title i {
+            color: var(--color-teal-accent);
+        }
+
+    .user-greeting {
+        font-size: 13.5px;
+        color: var(--color-text-sub);
+        margin-top: 6px;
+        margin-bottom: 0;
+    }
+
+        .user-greeting strong {
+            color: var(--color-teal-accent);
+        }
+
+    .btn-action-amber {
+        background-color: var(--color-amber);
+        color: #173831;
+        border-radius: 10px;
+        padding: 9px 20px;
+        font-size: 14px;
+        font-weight: 700;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        box-shadow: 0 3px 12px rgba(245, 166, 35, 0.25);
+        transition: all 0.2s ease;
+        white-space: nowrap;
+    }
+
+        .btn-action-amber:hover {
+            background-color: var(--color-amber-hover);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(245, 166, 35, 0.35);
+        }
+
+    /* 3. LƯỚI 3 THẺ THỐNG KÊ (CSS GRID) */
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 18px;
+        margin-bottom: 24px;
+    }
+
+    @@media (max-width: 820px) {
+        .stats-grid {
+            grid-template-columns: 1fr;
+            gap: 12px;
+        }
+    }
+
+    .academic-card {
+        background: #ffffff;
+        border: 1.5px solid var(--color-card-border);
+        border-radius: 16px;
+        box-shadow: 0 3px 14px rgba(20, 53, 47, 0.04);
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .stat-card {
+        padding: 18px 22px;
+        display: flex;
+        align-items: center;
+        gap: 16px;
+    }
+
+        .stat-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(20, 53, 47, 0.07);
+        }
+
+    .stat-icon-wrapper {
+        width: 50px;
+        height: 50px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 20px;
+        flex-shrink: 0;
+    }
+
+    .stat-title {
+        font-size: 11.5px;
+        font-weight: 700;
+        color: var(--color-text-sub);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-bottom: 3px;
+    }
+
+    .stat-number {
+        font-size: 1.75rem;
+        font-weight: 700;
+        line-height: 1.1;
+    }
+
+    /* 4. KHU VỰC BẢNG DỮ LIỆU */
+    .table-card {
+        padding: 22px;
+    }
+
+    .table-header-bar {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 14px;
+        margin-bottom: 18px;
+    }
+
+    .table-title {
+        font-size: 1.15rem;
+        font-weight: 700;
+        color: var(--color-teal-dark);
+        margin: 0;
+    }
+
+    .search-box-wrap {
+        position: relative;
+        min-width: 280px;
+    }
+
+        .search-box-wrap i {
+            position: absolute;
+            left: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--color-teal-accent);
+            font-size: 14px;
+        }
+
+    .search-input-field {
+        width: 100%;
+        border: 1.5px solid var(--color-card-border);
+        border-radius: 10px;
+        padding: 8px 12px 8px 36px;
+        font-size: 13.5px;
+        font-family: inherit;
+        background-color: #FAFCFA;
+        color: var(--color-text-title);
+        outline: none;
+        transition: all 0.2s ease;
+        box-sizing: border-box;
+    }
+
+        .search-input-field:focus {
+            border-color: var(--color-teal-accent);
+            background-color: #ffffff;
+            box-shadow: 0 0 0 2.5px rgba(10, 126, 113, 0.12);
+        }
+
+    /* 5. BẢNG DỮ LIỆU HỌC THUẬT (ACADEMIC TABLE) */
+    .table-responsive-container {
+        width: 100%;
+        overflow-x: auto;
+    }
+
+    .academic-table {
+        width: 100%;
+        border-collapse: collapse;
+        text-align: left;
+    }
+
+        .academic-table th {
+            font-size: 11px;
+            font-weight: 700;
+            color: var(--color-text-sub);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            padding: 12px 14px;
+            border-bottom: 2px solid var(--color-card-border);
+            background-color: #FAFDFB;
+        }
+
+        .academic-table td {
+            padding: 14px;
+            vertical-align: middle;
+            border-bottom: 1px solid var(--color-card-border);
+            font-size: 13.5px;
+        }
+
+        .academic-table tbody tr {
+            transition: background-color 0.15s ease;
+        }
+
+            .academic-table tbody tr:hover {
+                background-color: #F8FAF9;
+            }
+
+            .academic-table tbody tr:last-child td {
+                border-bottom: none;
+            }
+
+    .doc-name-cell {
+        font-weight: 600;
+        color: var(--color-teal-dark);
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .pdf-icon {
+        color: #DC2626;
+        font-size: 1.25rem;
+    }
+
+    /* Huy hiệu trạng thái */
+    .badge-status {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        font-size: 11px;
+        font-weight: 700;
+        padding: 4px 10px;
+        border-radius: 100px;
+    }
+
+    .status-completed {
+        background-color: var(--color-mint-light);
+        color: var(--color-teal-accent);
+        border: 1px solid var(--color-mint-border);
+    }
+
+    .status-processing {
+        background-color: #FFF4E5;
+        color: #D97706;
+        border: 1px solid #FDE68A;
+    }
+
+    /* Nút bấm thao tác */
+    .btn-chat-action {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        color: var(--color-teal-accent);
+        background: #ffffff;
+        border: 1.5px solid var(--color-card-border);
+        border-radius: 8px;
+        padding: 6px 14px;
+        font-size: 12.5px;
+        font-weight: 600;
+        text-decoration: none;
+        transition: all 0.2s ease;
+        white-space: nowrap;
+    }
+
+        .btn-chat-action:hover {
+            background-color: var(--color-mint-light);
+            border-color: var(--color-mint-border);
+            color: var(--color-teal-dark);
+            transform: translateY(-1px);
+        }
+
+    .btn-processing-disabled {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        background-color: #F3F4F6;
+        color: #9CA3AF;
+        border: 1px solid #E5E7EB;
+        border-radius: 8px;
+        padding: 6px 12px;
+        font-size: 12px;
+        cursor: not-allowed;
+        white-space: nowrap;
+    }
+
+    .spinner-dot {
+        display: inline-block;
+        width: 11px;
+        height: 11px;
+        border: 2px solid #CBD5E1;
+        border-top-color: #64748B;
+        border-radius: 50%;
+        animation: spin 0.8s linear infinite;
+    }
+
+    @@keyframes spin {
+        to {
+            transform: rotate(360deg);
+        }
+    }
+
+    /* Trạng thái rỗng */
+    .empty-state-box {
+        text-align: center;
+        padding: 42px 16px;
+        color: var(--color-text-sub);
+    }
+
+    .empty-icon {
+        font-size: 3rem;
+        color: var(--color-mint-border);
+        margin-bottom: 10px;
+    }
+
+    .empty-title {
+        font-size: 1.1rem;
+        font-weight: 700;
+        color: var(--color-teal-dark);
+        margin-bottom: 4px;
+    }
+</style>
+
+<div class="list-page-container">
+
+    <!-- 1. TIÊU ĐỀ & NÚT CHUYỂN SANG UPLOAD -->
+    <header class="page-header">
+        <div>
+            <h1 class="page-title font-serif-academic">
+                <i class="bi bi-journals"></i> Tài liệu của tôi
+            </h1>
+            <p class="user-greeting">
+                Xin chào, <strong>@currentUsername</strong>! Quản lý và trò chuyện thông minh với tài liệu cá nhân.
+            </p>
+        </div>
+        <div>
+            <a href="/Document/UploadPage" class="btn-action-amber">
+                <i class="bi bi-cloud-arrow-up-fill"></i> Tải lên tài liệu
+            </a>
+        </div>
+    </header>
+
+    <!-- 2. THẺ THỐNG KÊ (3 CỘT CSS GRID) -->
+    <section class="stats-grid">
+        <!-- Tổng số tài liệu -->
+        <div class="academic-card stat-card">
+            <div class="stat-icon-wrapper" style="background-color: var(--color-mint-light); color: var(--color-teal-accent);">
+                <i class="bi bi-files"></i>
+            </div>
+            <div>
+                <div class="stat-title">Tổng số tài liệu</div>
+                <div class="stat-number" style="color: var(--color-teal-dark);">@totalDocs</div>
+            </div>
+        </div>
+
+        <!-- Đã sẵn sàng -->
+        <div class="academic-card stat-card">
+            <div class="stat-icon-wrapper" style="background-color: #E8F5E9; color: #2E7D32;">
+                <i class="bi bi-check2-circle"></i>
+            </div>
+            <div>
+                <div class="stat-title">Đã sẵn sàng</div>
+                <div class="stat-number" style="color: #2E7D32;">@completedDocs</div>
+            </div>
+        </div>
+
+        <!-- Đang xử lý ngầm -->
+        <div class="academic-card stat-card">
+            <div class="stat-icon-wrapper" style="background-color: #FFF3E0; color: #D97706;">
+                <i class="bi bi-hourglass-split"></i>
+            </div>
+            <div>
+                <div class="stat-title">Đang xử lý ngầm</div>
+                <div class="stat-number" style="color: #D97706;">@processingDocs</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 3. BẢNG DANH SÁCH TÀI LIỆU -->
+    <section class="academic-card table-card">
+
+        <!-- Header bảng & Ô tìm kiếm -->
+        <div class="table-header-bar">
+            <h2 class="table-title font-serif-academic">Danh sách file đã tải lên</h2>
+
+            <div class="search-box-wrap">
+                <i class="bi bi-search"></i>
+                <input type="text"
+                       id="txtFilter"
+                       class="search-input-field"
+                       placeholder="Tìm kiếm nhanh tên file..."
+                       onkeyup="filterTable()"
+                       autocomplete="off" />
+            </div>
+        </div>
+
+        <!-- Bảng Responsive -->
+        <div class="table-responsive-container">
+            <table class="academic-table" id="docTable">
+                <thead>
+                    <tr>
+                        <th style="padding-left: 18px;">Tên file PDF</th>
+                        <th>Ngày tải lên</th>
+                        <th>Trạng thái</th>
+                        <th style="text-align: right; padding-right: 18px;">Thao tác</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (Model == null || !Model.Any())
+                    {
+                        <tr>
+                            <td colspan="4">
+                                <div class="empty-state-box">
+                                    <div class="empty-icon">
+                                        <i class="bi bi-folder-plus"></i>
+                                    </div>
+                                    <div class="empty-title font-serif-academic">Chưa có tài liệu nào</div>
+                                    <p style="font-size: 13px; margin: 0;">Hãy bấm nút <strong>"Tải lên tài liệu"</strong> ở phía trên để bắt đầu!</p>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                    else
+                    {
+                        @foreach (var doc in Model)
+                        {
+                            var isCompleted = doc.Status == "Completed";
+                            var badgeClass = isCompleted ? "status-completed" : "status-processing";
+                            var statusText = isCompleted ? "Sẵn sàng" : "Đang xử lý...";
+                            var statusIcon = isCompleted ? "bi-check-circle-fill" : "bi-hourglass-split";
+
+                            <tr>
+                                <!-- Cột Tên file -->
+                                <td style="padding-left: 18px;">
+                                    <div class="doc-name-cell">
+                                        <i class="bi bi-file-earmark-pdf-fill pdf-icon"></i>
+                                        <span>@doc.FileName</span>
+                                    </div>
+                                </td>
+
+                                <!-- Cột Ngày tải -->
+                                <td>
+                                    <span style="font-weight: 600; color: var(--color-text-title);">@doc.UploadedAt.ToString("dd/MM/yyyy")</span><br />
+                                    <span style="font-size: 11px; color: var(--color-text-sub);">@doc.UploadedAt.ToString("HH:mm")</span>
+                                </td>
+
+                                <!-- Cột Trạng thái -->
+                                <td>
+                                    <span class="badge-status @badgeClass">
+                                        <i class="bi @statusIcon"></i> @statusText
+                                    </span>
+                                </td>
+
+                                <!-- Cột Hành động -->
+                                <td style="text-align: right; padding-right: 18px;">
+                                    @if (isCompleted)
+                                    {
+                                        <a href="/Document/Details/@doc.Id" class="btn-chat-action">
+                                            <i class="bi bi-chat-quote-fill"></i> Hỏi đáp
+                                        </a>
+                                    }
+                                    else
+                                    {
+                                        <button class="btn-processing-disabled" disabled title="Hệ thống đang bóc tách nội dung và trích xuất vector...">
+                                            <span class="spinner-dot"></span> Đang xử lý
+                                        </button>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    }
+                </tbody>
+            </table>
+        </div>
+
+    </section>
+
+</div>
+
+<script>
+    // Lọc nhanh tên file trực tiếp trên bảng
+    function filterTable() {
+        const input = document.getElementById("txtFilter");
+        const filter = input.value.toLowerCase().trim();
+        const table = document.getElementById("docTable");
+        const trs = table.getElementsByTagName("tr");
+
+        for (let i = 1; i < trs.length; i++) {
+            const td = trs[i].getElementsByTagName("td")[0];
+            if (td) {
+                const txtValue = td.textContent || td.innerText;
+                if (txtValue.toLowerCase().indexOf(filter) > -1) {
+                    trs[i].style.display = "";
+                } else {
+                    trs[i].style.display = "none";
+                }
+            }
+        }
+    }
+</script>

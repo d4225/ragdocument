@@ -5,6 +5,7 @@ namespace SmartDocumentRAG.API.Services;
 
 public interface IRetrievalService
 {
-    Task<List<SearchResultDto>> HybridSearchAsync(string query, int topK = 5);
-    Task<List<ParentChunk>> GetRelevantParentChunksAsync(string query, int topK = 4);
+    // Thêm tham số documentIds vào đây
+    Task<List<ParentChunk>> GetRelevantParentChunksAsync(string query, int topK = 5, List<Guid>? documentIds = null);
+    Task<List<SearchResultDto>> HybridSearchAsync(string query, int topK = 5, List<Guid>? documentIds = null);
 }

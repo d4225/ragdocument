@@ -1,4 +1,5 @@
-﻿using System.Text;
+﻿using SmartDocumentRAG.API.DTOs;
+using System.Text;
 using System.Text.Json;
 
 namespace SmartDocumentRAG.API.Services;
@@ -205,5 +206,82 @@ public class GeminiService : IGeminiService
                 }
             }
         }
+    }
+    // Trong GeminiService.cs (hoặc dịch vụ xử lý AI hiện tại của bạn)
+    public async Task<List<QuizQuestionDto>> GenerateQuizAsync(string documentContext, int questionCount)
+    {
+        var rawModel = string.IsNullOrWhiteSpace(_chatModel) ? "gemini-1.5-flash" : _chatModel;
+        rawModel = rawModel.Replace("models/", "").Trim();
+
+        var url = $"https://generativelanguage.googleapis.com/v1beta/models/{rawModel}:generateContent?key={_apiKey}";
+
+        var prompt = $@"
+Dựa vào nội dung tài liệu sau, hãy tạo một bộ câu hỏi trắc nghiệm gồm {questionCount} câu hỏi.
+Bắt buộc trả về đúng định dạng danh sách JSON (không thêm bất kỳ lời dẫn hay văn bản nào khác):
+[
+  {{
+    ""questionNumber"": 1,
+    ""questionText"": ""Nội dung câu hỏi"",
+    ""options"": [""A. ..."", ""B. ..."", ""C. ..."", ""D. ...""],
+    ""correctAnswer"": ""A"",
+    ""explanation"": ""Giải thích vì sao đúng...""
+  }}
+]
+
+NỘI DUNG TÀI LIỆU:
+{documentContext}
+";
+
+        var requestBody = new
+        {
+            contents = new[]
+            {
+            new { parts = new[] { new { text = prompt } } }
+        },
+            generationConfig = new
+            {
+                temperature = 0.2,
+                responseMimeType = "application/json", // 🔥 BẮT BUỘC GEMINI TRẢ VỀ JSON THUẦN (KHÔNG CHÈM CHỮ CHÀO)
+                maxOutputTokens = 4096                  // 🔥 TĂNG TOKEN ĐỂ KHÔNG BỊ CẮT CỤT DỞ DANG
+            }
+        };
+
+        var jsonContent = new StringContent(
+            JsonSerializer.Serialize(requestBody),
+            Encoding.UTF8,
+            "application/json"
+        );
+
+        var response = await _httpClient.PostAsync(url, jsonContent);
+
+        if (!response.IsSuccessStatusCode)
+        {
+            var errText = await response.Content.ReadAsStringAsync();
+            throw new Exception($"Lỗi Gemini API: {errText}");
+        }
+
+        var responseString = await response.Content.ReadAsStringAsync();
+        using var doc = JsonDocument.Parse(responseString);
+
+        var rawText = doc.RootElement
+            .GetProperty("candidates")[0]
+            .GetProperty("content")
+            .GetProperty("parts")[0]
+            .GetProperty("text")
+            .GetString() ?? "[]";
+
+        // Cắt chính xác đoạn JSON nằm giữa [ và ] (chống mọi loại rác/lời chào của AI)
+        var startIndex = rawText.IndexOf('[');
+        var endIndex = rawText.LastIndexOf(']');
+
+        if (startIndex == -1 || endIndex == -1 || endIndex < startIndex)
+        {
+            throw new Exception("AI không trả về mảng JSON hợp lệ: " + rawText);
+        }
+
+        var cleanJson = rawText.Substring(startIndex, endIndex - startIndex + 1);
+
+        var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+        return JsonSerializer.Deserialize<List<QuizQuestionDto>>(cleanJson, options) ?? new List<QuizQuestionDto>();
     }
 }

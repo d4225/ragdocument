@@ -1,0 +1,359 @@
+﻿@{
+    Layout = "_Layout";
+    ViewData["Title"] = "Tải lên tài liệu PDF";
+}
+
+<style>
+    /* 1. KHUNG CHỨA TRANG (CĂN GIỮA ĐẸP MẮT) */
+    .upload-page-container {
+        max-width: 720px;
+        margin: 0 auto;
+        padding: 20px 20px 48px 20px;
+    }
+
+    /* 2. HEADER & NÚT QUAY LẠI */
+    .page-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 16px;
+        padding-bottom: 18px;
+        margin-bottom: 24px;
+        border-bottom: 1.5px solid var(--color-card-border);
+    }
+
+    .page-title {
+        font-size: 1.7rem;
+        font-weight: 700;
+        color: var(--color-teal-dark);
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin: 0;
+    }
+
+        .page-title i {
+            color: var(--color-teal-accent);
+        }
+
+    .btn-return-link {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        color: var(--color-teal-accent);
+        background: #ffffff;
+        border: 1.5px solid var(--color-card-border);
+        border-radius: 10px;
+        padding: 8px 16px;
+        font-size: 13.5px;
+        font-weight: 600;
+        text-decoration: none;
+        transition: all 0.2s ease;
+    }
+
+        .btn-return-link:hover {
+            background-color: var(--color-mint-light);
+            border-color: var(--color-mint-border);
+            color: var(--color-teal-dark);
+            transform: translateY(-1px);
+        }
+
+    /* 3. THẺ UPLOAD (ACADEMIC CARD) */
+    .academic-card {
+        background: #ffffff;
+        border: 1.5px solid var(--color-card-border);
+        border-radius: 20px;
+        padding: 34px 30px;
+        box-shadow: 0 6px 20px rgba(20, 53, 47, 0.05);
+    }
+
+    .upload-card-title {
+        font-size: 1.3rem;
+        font-weight: 700;
+        color: var(--color-teal-dark);
+        margin: 0 0 8px 0;
+    }
+
+    .upload-card-desc {
+        font-size: 13.5px;
+        line-height: 1.6;
+        color: var(--color-text-sub);
+        margin-bottom: 24px;
+    }
+
+        .upload-card-desc strong {
+            color: var(--color-teal-accent);
+        }
+
+    /* 4. VÙNG THẢ & CHỌN FILE (DROPZONE) */
+    .upload-dropzone {
+        border: 2px dashed var(--color-teal-accent);
+        border-radius: 16px;
+        padding: 32px 20px;
+        text-align: center;
+        background-color: var(--color-mint-light);
+        transition: all 0.25s ease;
+        margin-bottom: 20px;
+    }
+
+        .upload-dropzone:hover {
+            background-color: #DDEEE5;
+            border-color: #08665B;
+        }
+
+    .dropzone-pdf-icon {
+        font-size: 3.2rem;
+        color: #DC2626;
+        margin-bottom: 12px;
+        display: inline-block;
+        line-height: 1;
+    }
+
+    .custom-file-input {
+        display: block;
+        width: 100%;
+        max-width: 360px;
+        margin: 0 auto 10px auto;
+        padding: 9px 12px;
+        border: 1.5px solid var(--color-card-border);
+        border-radius: 10px;
+        background: #ffffff;
+        font-family: inherit;
+        font-size: 13.5px;
+        color: var(--color-text-title);
+        outline: none;
+        cursor: pointer;
+        transition: border-color 0.2s;
+        box-sizing: border-box;
+    }
+
+        .custom-file-input:focus {
+            border-color: var(--color-teal-accent);
+            box-shadow: 0 0 0 3px rgba(10, 126, 113, 0.12);
+        }
+
+    .file-hint-text {
+        font-size: 12px;
+        color: var(--color-text-sub);
+    }
+
+        .file-hint-text strong {
+            color: var(--color-teal-dark);
+        }
+
+    /* 5. NÚT SUBMIT UPLOAD */
+    .btn-submit-upload {
+        width: 100%;
+        background-color: var(--color-amber);
+        color: #173831;
+        border: none;
+        border-radius: 10px;
+        padding: 12px 20px;
+        font-size: 15px;
+        font-weight: 700;
+        font-family: inherit;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        box-shadow: 0 3px 12px rgba(245, 166, 35, 0.25);
+        transition: all 0.2s ease;
+    }
+
+        .btn-submit-upload:hover {
+            background-color: var(--color-amber-hover);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(245, 166, 35, 0.35);
+        }
+
+        .btn-submit-upload:disabled {
+            background-color: #F1D7B0;
+            color: #6C817C;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+    /* Spinner Pure CSS */
+    .upload-spinner {
+        display: none;
+        width: 13px;
+        height: 13px;
+        border: 2px solid rgba(23, 56, 49, 0.25);
+        border-top-color: #173831;
+        border-radius: 50%;
+        animation: spinAnim 0.75s linear infinite;
+        margin-left: 6px;
+    }
+
+    @@keyframes spinAnim {
+        to {
+            transform: rotate(360deg);
+        }
+    }
+
+    /* 6. HỘP THÔNG BÁO KẾT QUẢ */
+    .alert-result-box {
+        display: none;
+        margin-top: 20px;
+        padding: 14px 18px;
+        border-radius: 10px;
+        font-size: 13.5px;
+        line-height: 1.55;
+        animation: fadeIn 0.25s ease;
+    }
+
+    .alert-success-theme {
+        background-color: var(--color-mint-light);
+        border: 1px solid var(--color-mint-border);
+        color: var(--color-teal-dark);
+    }
+
+        .alert-success-theme a {
+            color: var(--color-teal-accent);
+            font-weight: 700;
+            text-decoration: underline;
+        }
+
+    .alert-danger-theme {
+        background-color: var(--color-danger-bg);
+        border: 1px solid var(--color-danger-border);
+        color: var(--color-danger-text);
+        font-weight: 600;
+    }
+
+    @@keyframes fadeIn {
+        from {
+            opacity: 0;
+            transform: translateY(-4px);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    @@media (max-width: 540px) {
+        .academic-card {
+            padding: 24px 16px;
+        }
+
+        .page-title {
+            font-size: 1.4rem;
+        }
+    }
+</style>
+
+<div class="upload-page-container">
+
+    <!-- 1. HEADER & QUAY LẠI -->
+    <header class="page-header">
+        <h1 class="page-title font-serif-academic">
+            <i class="bi bi-file-earmark-arrow-up-fill"></i> Tải lên tài liệu
+        </h1>
+        <a href="/Document/List" class="btn-return-link">
+            <i class="bi bi-arrow-left"></i> Trở về Danh sách
+        </a>
+    </header>
+
+    <!-- 2. THẺ CHỌN VÀ TẢI FILE PDF -->
+    <div class="academic-card">
+        <h2 class="upload-card-title font-serif-academic">Chọn file PDF để xử lý</h2>
+        <p class="upload-card-desc">
+            Hệ thống sẽ đẩy file vào hàng đợi <strong>Hangfire</strong> để tự động bóc tách nội dung văn bản, nhúng vector và chuẩn bị dữ liệu RAG cho các câu hỏi của bạn.
+        </p>
+
+        <form id="uploadForm">
+            <!-- Vùng kéo thả / Chọn file -->
+            <div class="upload-dropzone">
+                <i class="bi bi-file-earmark-pdf-fill dropzone-pdf-icon"></i>
+                <input type="file"
+                       id="fileInput"
+                       accept=".pdf"
+                       class="custom-file-input"
+                       required />
+                <div class="file-hint-text">
+                    Chỉ chấp nhận định dạng tệp <strong>.pdf</strong>
+                </div>
+            </div>
+
+            <!-- Nút gửi tải lên -->
+            <button id="btnUpload" type="submit" class="btn-submit-upload">
+                <i class="bi bi-cloud-arrow-up-fill"></i>
+                <span id="btnText">Tải lên & Xử lý ngầm</span>
+                <span id="spinner" class="upload-spinner"></span>
+            </button>
+        </form>
+
+        <!-- Hộp kết quả thông báo -->
+        <div id="result" class="alert-result-box"></div>
+    </div>
+
+</div>
+
+<!-- 3. JAVASCRIPT XỬ LÝ UPLOAD AJAX -->
+<script>
+    const UPLOAD_API = "/api/Document/upload";
+    document.getElementById("uploadForm").addEventListener("submit", uploadFile);
+
+    async function uploadFile(e) {
+        e.preventDefault();
+        const fileInput = document.getElementById("fileInput");
+        const file = fileInput.files[0];
+
+        if (!file) {
+            showMessage("⚠️ Vui lòng chọn file PDF!", "danger");
+            return;
+        }
+
+        const formData = new FormData();
+        formData.append("file", file);
+
+        setLoading(true);
+        try {
+            const response = await fetch(UPLOAD_API, {
+                method: "POST",
+                body: formData
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                showMessage(`🎉 <strong>Tải lên thành công!</strong> Hệ thống đang xử lý ngầm (Mã TL: ${data.documentId}). <br/><a href="/Document/List" style="display: inline-block; margin-top: 6px;">Xem danh sách tài liệu của bạn &rarr;</a>`, "success");
+                fileInput.value = "";
+            } else {
+                const error = await response.text();
+                showMessage("⚠️ Lỗi: " + error, "danger");
+            }
+        } catch (err) {
+            showMessage("⚠️ Không thể kết nối đến máy chủ xử lý.", "danger");
+        } finally {
+            setLoading(false);
+        }
+    }
+
+    function setLoading(state) {
+        const btn = document.getElementById("btnUpload");
+        const text = document.getElementById("btnText");
+        const spinner = document.getElementById("spinner");
+
+        btn.disabled = state;
+        text.innerText = state ? "Đang xử lý dữ liệu..." : "Tải lên & Xử lý ngầm";
+        spinner.style.display = state ? "inline-block" : "none";
+    }
+
+    function showMessage(message, type) {
+        const box = document.getElementById("result");
+        box.style.display = "block";
+
+        if (type === 'success') {
+            box.className = "alert-result-box alert-success-theme";
+        } else {
+            box.className = "alert-result-box alert-danger-theme";
+        }
+
+        box.innerHTML = message;
+    }
+</script>

@@ -1,0 +1,903 @@
+﻿@model SmartDocumentRAG.API.Models.Document
+
+@{
+    Layout = "_Layout";
+    ViewData["Title"] = "Chi tiết: " + Model.FileName;
+    var isCompleted = Model.Status == "Completed";
+}
+
+<style>
+    /* 1. KHUNG CHỨA TỔNG THỂ (3 CỘT FIT MÀN HÌNH - KHÔNG CUỘN TRANG) */
+    .details-master-grid {
+        display: grid;
+        grid-template-columns: 310px 1fr 410px;
+        gap: 16px;
+        align-items: start;
+        padding: 10px 22px 14px 22px;
+        max-width: 1720px;
+        margin: 0 auto;
+        box-sizing: border-box;
+    }
+
+    @@media (max-width: 1350px) {
+        .details-master-grid {
+            grid-template-columns: 290px 1fr;
+        }
+
+        .chat-column-area {
+            grid-column: span 2;
+        }
+    }
+
+    @@media (max-width: 960px) {
+        .details-master-grid {
+            grid-template-columns: 1fr;
+            padding: 10px 12px 24px 12px;
+        }
+
+        .chat-column-area {
+            grid-column: span 1;
+        }
+    }
+
+    /* 2. CỘT 1: MASONRY CARDS TINH GỌN */
+    .masonry-sidebar-stack {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        position: sticky;
+        top: 76px;
+    }
+
+    /* Thẻ Masonry cơ bản */
+    .masonry-card {
+        background: #ffffff;
+        border: 1.5px solid var(--color-card-border);
+        border-radius: 14px;
+        padding: 12px 15px;
+        box-shadow: 0 3px 12px rgba(18, 64, 53, 0.04);
+        transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+    }
+
+        .masonry-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 18px rgba(18, 64, 53, 0.08);
+            border-color: #B2D8C7;
+        }
+
+    /* --- THẺ 1: HỒ SƠ TÀI LIỆU --- */
+    .card-doc-profile {
+        border-top: 3.5px solid var(--color-teal-accent);
+    }
+
+    .profile-heading {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 1rem;
+        font-weight: 700;
+        color: var(--color-teal-dark);
+        margin-bottom: 10px;
+        padding-bottom: 6px;
+        border-bottom: 1px solid var(--color-card-border);
+    }
+
+        .profile-heading i {
+            color: var(--color-teal-accent);
+            font-size: 1.1rem;
+        }
+
+    .info-item {
+        margin-bottom: 8px;
+    }
+
+    .info-label {
+        font-size: 10.5px;
+        font-weight: 700;
+        color: var(--color-text-sub);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-bottom: 2px;
+    }
+
+    .info-value {
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--color-text-title);
+        word-break: break-word;
+        line-height: 1.35;
+    }
+
+    .badge-status-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        font-size: 11px;
+        font-weight: 700;
+        padding: 3px 10px;
+        border-radius: 100px;
+    }
+
+    .status-ready {
+        background-color: var(--color-mint-light);
+        color: var(--color-teal-accent);
+        border: 1px solid var(--color-mint-border);
+    }
+
+    .status-busy {
+        background-color: #FFF4E5;
+        color: #D97706;
+        border: 1px solid #FDE68A;
+    }
+
+    /* --- THẺ 2: Ô LÀM QUIZ --- */
+    .card-widget-quiz {
+        background: linear-gradient(145deg, #F0F9F5 0%, #FFFFFF 100%);
+        border: 1.5px solid #C4E6D6;
+    }
+
+    .widget-header-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 4px;
+    }
+
+    .widget-tag-quiz {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        background-color: #E2F4EC;
+        color: #0A7E71;
+        font-size: 9.5px;
+        font-weight: 700;
+        padding: 2px 7px;
+        border-radius: 5px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .widget-title {
+        font-size: 0.95rem;
+        font-weight: 700;
+        color: var(--color-teal-dark);
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        margin: 0;
+    }
+
+    .widget-desc {
+        font-size: 11.5px;
+        color: var(--color-text-sub);
+        line-height: 1.4;
+        margin: 6px 0 10px 0;
+    }
+
+    .btn-action-widget {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 7px 13px;
+        border-radius: 9px;
+        font-size: 12.5px;
+        font-weight: 700;
+        text-decoration: none;
+        transition: all 0.2s ease;
+    }
+
+    .btn-quiz-cta {
+        background-color: var(--color-teal-accent);
+        color: #ffffff;
+        box-shadow: 0 3px 10px rgba(10, 126, 113, 0.2);
+    }
+
+        .btn-quiz-cta:hover {
+            background-color: #08665B;
+            transform: translateY(-1px);
+        }
+
+    /* --- THẺ 3: Ô TÓM TẮT VĂN BẢN --- */
+    .card-widget-summary {
+        background: linear-gradient(145deg, #FEFBF4 0%, #FFFFFF 100%);
+        border: 1.5px solid #F0E6D2;
+    }
+
+    .widget-tag-summary {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        background-color: #FFF3DD;
+        color: #B45309;
+        font-size: 9.5px;
+        font-weight: 700;
+        padding: 2px 7px;
+        border-radius: 5px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .btn-summary-cta {
+        background-color: var(--color-amber);
+        color: #173831;
+        box-shadow: 0 3px 10px rgba(245, 166, 35, 0.2);
+    }
+
+        .btn-summary-cta:hover {
+            background-color: var(--color-amber-hover);
+            transform: translateY(-1px);
+        }
+
+    /* --- THẺ 4: Ô TRỞ VỀ THƯ VIỆN --- */
+    .card-widget-return {
+        padding: 10px 14px;
+        background-color: #ffffff;
+    }
+
+    .link-return-library {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        text-decoration: none;
+        color: var(--color-teal-accent);
+        font-size: 12.5px;
+        font-weight: 600;
+        transition: all 0.2s ease;
+    }
+
+        .link-return-library:hover {
+            color: var(--color-teal-dark);
+        }
+
+        .link-return-library i.arrow-icon {
+            transition: transform 0.2s ease;
+        }
+
+        .link-return-library:hover i.arrow-icon {
+            transform: translateX(-3px);
+        }
+
+    /* 3. CỘT 2: KHUNG XEM TRƯỚC PDF (FIT HEIGHT) */
+    .preview-column-card {
+        background: #ffffff;
+        border: 1.5px solid var(--color-card-border);
+        border-radius: 16px;
+        padding: 14px 16px;
+        box-shadow: 0 4px 16px rgba(18, 64, 53, 0.05);
+        display: flex;
+        flex-direction: column;
+        height: calc(100vh - 95px);
+        min-height: 520px;
+        max-height: 605px;
+        box-sizing: border-box;
+    }
+
+    .preview-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 10px;
+        gap: 8px;
+    }
+
+    .preview-title {
+        font-size: 1rem;
+        font-weight: 700;
+        color: var(--color-teal-dark);
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+    .btn-external-tab {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        background: #ffffff;
+        color: var(--color-teal-accent);
+        border: 1px solid var(--color-card-border);
+        border-radius: 7px;
+        padding: 4px 10px;
+        font-size: 11.5px;
+        font-weight: 600;
+        text-decoration: none;
+        transition: all 0.2s ease;
+    }
+
+        .btn-external-tab:hover {
+            background-color: var(--color-mint-light);
+            border-color: var(--color-mint-border);
+            color: var(--color-teal-dark);
+        }
+
+    .pdf-frame {
+        width: 100%;
+        flex-grow: 1;
+        border: 1.5px solid var(--color-card-border);
+        border-radius: 10px;
+        background-color: #FAFCFA;
+    }
+
+    /* 4. CỘT 3: KHUNG CHAT AI CHAT BUBBLE (FIT HEIGHT) */
+    .chat-column-card {
+        background: #ffffff;
+        border: 1.5px solid var(--color-card-border);
+        border-radius: 16px;
+        padding: 14px 16px;
+        box-shadow: 0 4px 16px rgba(18, 64, 53, 0.05);
+        display: flex;
+        flex-direction: column;
+        height: calc(100vh - 95px);
+        min-height: 520px;
+        max-height: 605px;
+        box-sizing: border-box;
+    }
+
+    .chat-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding-bottom: 8px;
+        border-bottom: 1px solid var(--color-card-border);
+        margin-bottom: 10px;
+    }
+
+    .chat-header-title {
+        font-size: 1rem;
+        font-weight: 700;
+        color: var(--color-teal-dark);
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+    .btn-reset-chat {
+        background: #ffffff;
+        color: var(--color-teal-accent);
+        border: 1px solid var(--color-card-border);
+        border-radius: 100px;
+        padding: 3px 10px;
+        font-size: 11.5px;
+        font-weight: 600;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        transition: all 0.2s ease;
+    }
+
+        .btn-reset-chat:hover {
+            background-color: var(--color-mint-light);
+            border-color: var(--color-mint-border);
+        }
+
+    /* KHUNG DANH SÁCH BONG BÓNG CHAT */
+    .chat-bubble-stream {
+        flex-grow: 1;
+        overflow-y: auto;
+        background-color: #F8FAF9;
+        border: 1.5px solid var(--color-card-border);
+        border-radius: 12px;
+        padding: 12px 10px;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        scrollbar-width: thin;
+        scrollbar-color: #C8E5D8 transparent;
+    }
+
+        .chat-bubble-stream::-webkit-scrollbar {
+            width: 4px;
+        }
+
+        .chat-bubble-stream::-webkit-scrollbar-thumb {
+            background-color: #C8E5D8;
+            border-radius: 10px;
+        }
+
+    /* Trạng thái rỗng ban đầu */
+    .chat-empty-intro {
+        text-align: center;
+        margin: auto;
+        padding: 16px 8px;
+        color: var(--color-text-sub);
+    }
+
+        .chat-empty-intro i {
+            font-size: 2rem;
+            color: #C8E5D8;
+            display: inline-block;
+            margin-bottom: 6px;
+        }
+
+    /* CẤU TRÚC HÀNG BONG BÓNG */
+    .bubble-row {
+        display: flex;
+        align-items: flex-end;
+        gap: 6px;
+        width: 100%;
+        animation: bubblePop 0.22s ease;
+    }
+
+    @@keyframes bubblePop {
+        from {
+            opacity: 0;
+            transform: translateY(4px);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .user-row {
+        justify-content: flex-end;
+    }
+
+    .assistant-row {
+        justify-content: flex-start;
+    }
+
+    .chat-avatar {
+        width: 26px;
+        height: 26px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 11.5px;
+        flex-shrink: 0;
+        box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+    }
+
+    .user-avatar {
+        background: linear-gradient(135deg, var(--color-teal-accent) 0%, #16A08F 100%);
+        color: #ffffff;
+    }
+
+    .ai-avatar {
+        background: linear-gradient(135deg, #124035 0%, #0d2e26 100%);
+        color: #F8CB7C;
+    }
+
+    .bubble-content {
+        max-width: 84%;
+        padding: 9px 13px;
+        font-size: 13.5px;
+        line-height: 1.45;
+        word-break: break-word;
+        box-shadow: 0 1px 6px rgba(18, 64, 53, 0.04);
+        position: relative;
+    }
+
+    .user-bubble {
+        background-color: var(--color-teal-accent);
+        color: #ffffff;
+        border-radius: 14px 14px 3px 14px;
+    }
+
+    .assistant-bubble {
+        background-color: #ffffff;
+        color: var(--color-text-title);
+        border: 1.5px solid var(--color-card-border);
+        border-radius: 14px 14px 14px 3px;
+    }
+
+    .citation-block {
+        font-size: 11.5px;
+        background-color: var(--color-mint-light);
+        border-left: 3px solid var(--color-teal-accent);
+        border-radius: 0 6px 6px 0;
+        padding: 5px 8px;
+        margin-top: 8px;
+        color: var(--color-teal-dark);
+        line-height: 1.4;
+    }
+
+    .custom-spinner {
+        display: inline-block;
+        width: 12px;
+        height: 12px;
+        border: 2px solid rgba(10, 126, 113, 0.25);
+        border-top-color: var(--color-teal-accent);
+        border-radius: 50%;
+        animation: spinAnim 0.75s linear infinite;
+        vertical-align: middle;
+        margin-right: 5px;
+    }
+
+    @@keyframes spinAnim {
+        to {
+            transform: rotate(360deg);
+        }
+    }
+
+    /* THANH NHẬP LIỆU CHAT */
+    .chat-input-bar {
+        background: #ffffff;
+        border: 1.5px solid var(--color-card-border);
+        border-radius: 10px;
+        padding: 4px 5px 4px 12px;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        margin-top: 10px;
+        box-shadow: 0 2px 8px rgba(18, 64, 53, 0.03);
+        transition: all 0.2s ease;
+    }
+
+        .chat-input-bar:focus-within {
+            border-color: var(--color-teal-accent);
+            box-shadow: 0 0 0 2.5px rgba(10, 126, 113, 0.12);
+        }
+
+    .chat-text-input {
+        border: none;
+        outline: none;
+        width: 100%;
+        font-family: inherit;
+        font-size: 13.5px;
+        color: var(--color-text-title);
+        background: transparent;
+    }
+
+        .chat-text-input::placeholder {
+            color: #9DB0AA;
+        }
+
+    .btn-send-chat {
+        background-color: var(--color-amber);
+        color: #173831;
+        border: none;
+        border-radius: 8px;
+        padding: 6px 14px;
+        font-size: 12.5px;
+        font-weight: 700;
+        font-family: inherit;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        white-space: nowrap;
+        transition: all 0.2s ease;
+    }
+
+        .btn-send-chat:hover {
+            background-color: var(--color-amber-hover);
+        }
+
+        .btn-send-chat:disabled {
+            background-color: #E5ECE8;
+            color: #9DB0AA;
+            cursor: not-allowed;
+        }
+</style>
+
+<div class="details-master-grid">
+
+    <!-- ============================================================== -->
+    <!-- CỘT 1: MASONRY CARDS TINH GỌN (HỒ SƠ, QUIZ, TÓM TẮT, TRỞ VỀ)  -->
+    <!-- ============================================================== -->
+    <aside>
+        <div class="masonry-sidebar-stack">
+
+            <!-- CARD 1: HỒ SƠ TÀI LIỆU -->
+            <div class="masonry-card card-doc-profile">
+                <div class="profile-heading font-serif-academic">
+                    <i class="bi bi-file-earmark-text"></i>
+                    <span>Hồ sơ tài liệu</span>
+                </div>
+
+                <div class="info-item">
+                    <div class="info-label">Tên tệp</div>
+                    <div class="info-value">@Model.FileName</div>
+                </div>
+
+                <div class="info-item">
+                    <div class="info-label">Thời gian tải lên</div>
+                    <div class="info-value">@Model.UploadedAt.ToString("dd/MM/yyyy HH:mm")</div>
+                </div>
+
+                <div class="info-item" style="margin-bottom: 0;">
+                    <div class="info-label">Trạng thái RAG</div>
+                    <div>
+                        <span class="badge-status-pill @(isCompleted ? "status-ready" : "status-busy")">
+                            @if (isCompleted)
+                            {
+                                <i class="bi bi-check-circle-fill"></i>
+                                <span>Đã sẵn sàng</span>
+                            }
+                            else
+                            {
+                                <span class="custom-spinner" style="border-top-color: #D97706;"></span>
+                                <span>Đang xử lý ngầm...</span>
+                            }
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- CARD 2: Ô LÀM QUIZ (MASONRY WIDGET) -->
+            <div class="masonry-card card-widget-quiz">
+                <div class="widget-header-row">
+                    <div class="widget-title font-serif-academic">
+                        <i class="bi bi-award-fill" style="color: var(--color-teal-accent);"></i>
+                        <span>Làm Quiz ôn thi</span>
+                    </div>
+                    <span class="widget-tag-quiz">
+                        <i class="bi bi-patch-question-fill"></i> AI Test
+                    </span>
+                </div>
+                <p class="widget-desc">
+                    Tự động tạo bộ câu hỏi trắc nghiệm A, B, C, D để kiểm tra kiến thức tài liệu.
+                </p>
+                <a href="/Document/Quiz/@Model.Id" class="btn-action-widget btn-quiz-cta" title="Chuyển sang trang làm Quiz">
+                    <span>Vào làm Quiz</span>
+                    <i class="bi bi-arrow-right"></i>
+                </a>
+            </div>
+
+            <!-- CARD 3: Ô TÓM TẮT VĂN BẢN (MASONRY WIDGET) -->
+            <div class="masonry-card card-widget-summary">
+                <div class="widget-header-row">
+                    <div class="widget-title font-serif-academic">
+                        <i class="bi bi-file-earmark-richtext-fill" style="color: #B45309;"></i>
+                        <span>Tóm tắt văn bản</span>
+                    </div>
+                    <span class="widget-tag-summary">
+                        <i class="bi bi-journal-text"></i> Summary
+                    </span>
+                </div>
+                <p class="widget-desc">
+                    AI cô đọng các luận điểm và kết luận quan trọng thành gạch đầu dòng mạch lạc.
+                </p>
+                <a href="/Document/Summary/@Model.Id" class="btn-action-widget btn-summary-cta" title="Tóm tắt nội dung tài liệu">
+                    <span>Xem tóm tắt AI</span>
+                    <i class="bi bi-arrow-right"></i>
+                </a>
+            </div>
+
+            <!-- CARD 4: Ô TRỞ VỀ THƯ VIỆN -->
+            <div class="masonry-card card-widget-return">
+                <a href="/Document" class="link-return-library" title="Quay lại danh mục tài liệu">
+                    <span><i class="bi bi-arrow-left arrow-icon me-1"></i> Trở về Thư viện</span>
+                    <i class="bi bi-journal-album"></i>
+                </a>
+            </div>
+
+        </div>
+    </aside>
+
+    <!-- ============================================================== -->
+    <!-- CỘT 2: KHUNG XEM TRƯỚC TÀI LIỆU PDF TRỰC TUYẾN                 -->
+    <!-- ============================================================== -->
+    <section>
+        <div class="preview-column-card">
+            <div class="preview-header">
+                <div class="preview-title font-serif-academic">
+                    <i class="bi bi-eye-fill" style="color: var(--color-teal-accent);"></i>
+                    <span>Xem trước tài liệu</span>
+                </div>
+                <a href="/api/Document/view/@Model.Id" target="_blank" class="btn-external-tab" title="Mở file PDF ra tab riêng">
+                    <i class="bi bi-box-arrow-up-right"></i>
+                    <span>Mở rộng</span>
+                </a>
+            </div>
+
+            <!-- IFRAME XEM PDF -->
+            <iframe src="/api/Document/view/@Model.Id#toolbar=1" class="pdf-frame" title="@Model.FileName"></iframe>
+        </div>
+    </section>
+
+    <!-- ============================================================== -->
+    <!-- CỘT 3: KHUNG CHAT AI (MULTI-TURN RAG VỚI CHAT BUBBLE)          -->
+    <!-- ============================================================== -->
+    <main class="chat-column-area">
+        <div class="chat-column-card">
+
+            <div class="chat-header">
+                <div class="chat-header-title font-serif-academic">
+                    <i class="bi bi-robot" style="color: var(--color-amber);"></i>
+                    <span>Hỏi đáp cùng AI</span>
+                </div>
+                <button class="btn-reset-chat" type="button" onclick="startNewChat()">
+                    <i class="bi bi-plus-lg"></i> Mới
+                </button>
+            </div>
+
+            <!-- KHUNG STREAM BONG BÓNG TIN NHẮN (CHAT BUBBLE STREAM) -->
+            <div id="chatContainer" class="chat-bubble-stream">
+                <div class="chat-empty-intro" id="chatEmptyState">
+                    <i class="bi bi-chat-quote-fill"></i>
+                    <div class="font-serif-academic fw-bold" style="color: var(--color-teal-dark); font-size: 14px; margin-bottom: 2px;">
+                        Khám phá nội dung tài liệu
+                    </div>
+                    <p style="font-size: 12px; margin: 0;">Đặt câu hỏi để AI trích xuất và trả lời ngay từ tài liệu!</p>
+                </div>
+            </div>
+
+            <!-- THANH NHẬP CÂU HỎI -->
+            <form id="chatForm" onsubmit="handleSendRagChat(event, '@Model.Id')">
+                <div class="chat-input-bar">
+                    <input type="text"
+                           id="txtChatQuestion"
+                           class="chat-text-input"
+                           placeholder="Nhập câu hỏi về tài liệu..."
+                           autocomplete="off"
+                           required />
+                    <button class="btn-send-chat" type="submit" id="btnSendChat">
+                        <span>Gửi</span>
+                        <i class="bi bi-send-fill"></i>
+                    </button>
+                </div>
+            </form>
+
+        </div>
+    </main>
+
+</div>
+
+<!-- JAVASCRIPT XỬ LÝ CHAT BUBBLES & STREAMING RAG -->
+<script>
+    function startNewChat() {
+        document.getElementById('chatContainer').innerHTML = `
+                    <div class="chat-empty-intro" id="chatEmptyState">
+                        <i class="bi bi-chat-quote-fill"></i>
+                        <div class="font-serif-academic fw-bold" style="color: var(--color-teal-dark); font-size: 14px; margin-bottom: 2px;">
+                            Đã mở cuộc trò chuyện mới
+                        </div>
+                        <p style="font-size: 12px; margin: 0;">Bạn muốn tìm hiểu thêm điều gì về tài liệu?</p>
+                    </div>`;
+    }
+
+    async function handleSendRagChat(event, documentId) {
+        event.preventDefault();
+        const input = document.getElementById('txtChatQuestion');
+        const btnSend = document.getElementById('btnSendChat');
+        const question = input.value.trim();
+
+        if (!question) return;
+
+        const emptyState = document.getElementById('chatEmptyState');
+        if (emptyState) emptyState.remove();
+
+        // 1. Bong bóng chat Người dùng (Phải)
+        appendMessage('user', question);
+        input.value = '';
+        input.disabled = true;
+        btnSend.disabled = true;
+
+        // 2. Bong bóng chat AI đang chờ (Trái)
+        const bubbleId = 'ai-bubble-' + Date.now();
+        appendStreamingPlaceholder(bubbleId);
+        scrollToBottom();
+
+        try {
+            const response = await fetch('/api/Document/chat-stream', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    question: question,
+                    topK: 4,
+                    documentIds: [documentId]
+                })
+            });
+
+            if (!response.ok) throw new Error("Lỗi kết nối Stream API");
+
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder();
+            let fullText = "";
+
+            while (true) {
+                const { value, done } = await reader.read();
+                if (done) break;
+
+                const chunk = decoder.decode(value, { stream: true });
+                const lines = chunk.split('\n');
+
+                for (const line of lines) {
+                    if (line.startsWith('data: ')) {
+                        try {
+                            const json = JSON.parse(line.substring(6));
+                            if (json.text) {
+                                fullText += json.text;
+                                document.getElementById(bubbleId).innerText = fullText;
+                                scrollToBottom();
+                            }
+                            if (json.done && json.citations) {
+                                appendCitationsToBubble(bubbleId, json.citations);
+                            }
+                            if (json.error) {
+                                document.getElementById(bubbleId).innerText = "⚠️ Lỗi: " + json.error;
+                            }
+                        } catch (e) { }
+                    }
+                }
+            }
+        } catch (err) {
+            document.getElementById(bubbleId).innerText = "⚠️ Lỗi hệ thống: " + err.message;
+        } finally {
+            input.disabled = false;
+            btnSend.disabled = false;
+            input.focus();
+            scrollToBottom();
+        }
+    }
+
+    // TẠO BONG BÓNG CHAT CHỜ CỦA AI VỚI AVATAR
+    function appendStreamingPlaceholder(id) {
+        const chatContainer = document.getElementById('chatContainer');
+        const row = document.createElement('div');
+        row.className = 'bubble-row assistant-row';
+        row.innerHTML = `
+                    <div class="chat-avatar ai-avatar" title="Trợ lý AI"><i class="bi bi-robot"></i></div>
+                    <div class="bubble-content assistant-bubble" id="${id}">
+                        <span class="custom-spinner"></span>
+                        <span style="color: var(--color-text-sub); font-size: 12.5px;">Đang đọc và phân tích...</span>
+                    </div>
+                `;
+        chatContainer.appendChild(row);
+    }
+
+    // ĐÍNH KÈM TRÍCH DẪN NGUỒN VÀO TRONG BONG BÓNG AI
+    function appendCitationsToBubble(bubbleId, citations) {
+        const bubble = document.getElementById(bubbleId);
+        if (!bubble || !citations || citations.length === 0) return;
+
+        const citeWrapper = document.createElement('div');
+        citeWrapper.style.marginTop = '8px';
+
+        const citeHeader = document.createElement('div');
+        citeHeader.style.fontSize = '10.5px';
+        citeHeader.style.fontWeight = '700';
+        citeHeader.style.color = 'var(--color-text-sub)';
+        citeHeader.style.letterSpacing = '0.5px';
+        citeHeader.style.marginBottom = '3px';
+        citeHeader.innerText = 'TRÍCH DẪN NGUỒN:';
+        citeWrapper.appendChild(citeHeader);
+
+        citations.forEach(c => {
+            const citeBox = document.createElement('div');
+            citeBox.className = 'citation-block';
+            citeBox.innerHTML = `<strong>📄 ${escapeHtml(c.documentName)}</strong>:<br/><em>"${escapeHtml(c.snippet)}"</em>`;
+            citeWrapper.appendChild(citeBox);
+        });
+
+        bubble.appendChild(citeWrapper);
+        scrollToBottom();
+    }
+
+    // TẠO BONG BÓNG CHAT CHUẨN (USER / AI)
+    function appendMessage(sender, content) {
+        const chatContainer = document.getElementById('chatContainer');
+        const isUser = sender === 'user';
+        const row = document.createElement('div');
+        row.className = `bubble-row ${isUser ? 'user-row' : 'assistant-row'}`;
+
+        if (isUser) {
+            row.innerHTML = `
+                        <div class="bubble-content user-bubble">${escapeHtml(content)}</div>
+                        <div class="chat-avatar user-avatar" title="Bạn"><i class="bi bi-person-fill"></i></div>
+                    `;
+        } else {
+            row.innerHTML = `
+                        <div class="chat-avatar ai-avatar" title="Trợ lý AI"><i class="bi bi-robot"></i></div>
+                        <div class="bubble-content assistant-bubble">${escapeHtml(content)}</div>
+                    `;
+        }
+
+        chatContainer.appendChild(row);
+    }
+
+    function scrollToBottom() {
+        const chatContainer = document.getElementById('chatContainer');
+        chatContainer.scrollTop = chatContainer.scrollHeight;
+    }
+
+    function escapeHtml(text) {
+        if (!text) return '';
+        return String(text).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    }
+</script>

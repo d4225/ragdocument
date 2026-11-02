@@ -1,0 +1,725 @@
+﻿@model SmartDocumentRAG.API.Models.Document
+
+@{
+    ViewData["Title"] = "Trắc nghiệm ôn thi AI - " + Model.FileName;
+}
+
+<!-- Google Fonts: Lora (Học thuật) & Be Vietnam Pro -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=Lora:ital,wght@0,600;0,700;1,600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+
+<style>
+    /* 1. RESET & BIẾN MÀU CHỦ ĐẠO */
+    * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+    }
+
+    :root {
+        --color-bg-main: #F4F7F4;
+        --color-teal-accent: #0A7E71;
+        --color-teal-dark: #14352F;
+        --color-mint-light: #E7F4EE;
+        --color-mint-border: #C8E5D8;
+        --color-amber: #F5A623;
+        --color-amber-hover: #E29413;
+        --color-text-title: #142E28;
+        --color-text-body: #324B45;
+        --color-text-muted: #748A84;
+        --color-card-border: #E1EAE5;
+        --color-correct-bg: #E8F5E9;
+        --color-correct-border: #4CAF50;
+        --color-correct-text: #1B5E20;
+        --color-wrong-bg: #FFEBEE;
+        --color-wrong-border: #EF5350;
+        --color-wrong-text: #B71C1C;
+    }
+
+    body {
+        background-color: var(--color-bg-main);
+        font-family: 'Be Vietnam Pro', -apple-system, sans-serif;
+        color: var(--color-text-body);
+        padding: 24px 16px 64px 16px;
+        -webkit-font-smoothing: antialiased;
+    }
+
+    .font-serif-academic {
+        font-family: 'Lora', Georgia, serif;
+    }
+
+    .hidden {
+        display: none !important;
+    }
+
+    .quiz-container {
+        max-width: 880px;
+        margin: 0 auto;
+    }
+
+    /* 2. THANH ĐIỀU HƯỚNG QUAY LẠI */
+    .top-nav-bar {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 16px;
+    }
+
+    .btn-back-link {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        color: var(--color-teal-accent);
+        text-decoration: none;
+        font-size: 13.5px;
+        font-weight: 600;
+        transition: color 0.2s ease;
+    }
+
+        .btn-back-link:hover {
+            color: var(--color-teal-dark);
+            text-decoration: underline;
+        }
+
+    /* 3. THẺ CHỨA CHÍNH (ACADEMIC CARD) */
+    .academic-card {
+        background: #ffffff;
+        border: 1px solid var(--color-card-border);
+        border-radius: 22px;
+        padding: 36px 32px;
+        box-shadow: 0 8px 24px rgba(20, 53, 47, 0.05);
+    }
+
+    /* 4. HEADER TRANG QUIZ */
+    .quiz-main-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        flex-wrap: wrap;
+        gap: 16px;
+        padding-bottom: 22px;
+        margin-bottom: 28px;
+        border-bottom: 1.5px solid var(--color-card-border);
+    }
+
+    .tag-ai-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        background-color: var(--color-mint-light);
+        color: var(--color-teal-accent);
+        border: 1px solid var(--color-mint-border);
+        font-size: 11px;
+        font-weight: 700;
+        padding: 4px 12px;
+        border-radius: 100px;
+        letter-spacing: 0.5px;
+        text-transform: uppercase;
+        margin-bottom: 8px;
+    }
+
+    .quiz-header-title {
+        font-size: 1.85rem;
+        font-weight: 700;
+        color: var(--color-teal-dark);
+        line-height: 1.3;
+    }
+
+    .doc-name-subtitle {
+        font-size: 14px;
+        color: var(--color-text-muted);
+        margin-top: 4px;
+    }
+
+        .doc-name-subtitle strong {
+            color: var(--color-text-title);
+        }
+
+    .btn-library-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        background: #ffffff;
+        color: var(--color-text-muted);
+        border: 1px solid var(--color-card-border);
+        border-radius: 100px;
+        padding: 6px 14px;
+        font-size: 13px;
+        font-weight: 600;
+        text-decoration: none;
+        transition: all 0.2s ease;
+    }
+
+        .btn-library-pill:hover {
+            background-color: var(--color-mint-light);
+            color: var(--color-teal-accent);
+            border-color: var(--color-mint-border);
+        }
+
+    /* 5. BƯỚC 1: CẤU HÌNH TẠO ĐỀ */
+    .setup-view-wrapper {
+        text-align: center;
+        padding: 24px 12px;
+    }
+
+    .setup-icon-box {
+        width: 72px;
+        height: 72px;
+        background: linear-gradient(135deg, var(--color-mint-light) 0%, #D8EDE3 100%);
+        border: 2px solid var(--color-mint-border);
+        border-radius: 20px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 20px auto;
+        font-size: 32px;
+        color: var(--color-teal-accent);
+        box-shadow: 0 6px 16px rgba(10, 126, 113, 0.1);
+    }
+
+    .setup-title {
+        font-size: 1.45rem;
+        font-weight: 700;
+        color: var(--color-teal-dark);
+        margin-bottom: 8px;
+    }
+
+    .setup-desc {
+        font-size: 14px;
+        color: var(--color-text-muted);
+        max-width: 520px;
+        margin: 0 auto 28px auto;
+        line-height: 1.6;
+    }
+
+    .select-count-group {
+        max-width: 340px;
+        margin: 0 auto 28px auto;
+        text-align: left;
+    }
+
+    .select-label {
+        display: block;
+        font-size: 11.5px;
+        font-weight: 700;
+        color: var(--color-text-muted);
+        text-transform: uppercase;
+        letter-spacing: 0.6px;
+        margin-bottom: 8px;
+        text-align: center;
+    }
+
+    .custom-select-control {
+        width: 100%;
+        padding: 12px 16px;
+        border: 1.5px solid var(--color-card-border);
+        border-radius: 12px;
+        background-color: #FAFCFA;
+        font-family: inherit;
+        font-size: 14.5px;
+        font-weight: 600;
+        color: var(--color-teal-dark);
+        outline: none;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+
+        .custom-select-control:focus {
+            border-color: var(--color-teal-accent);
+            box-shadow: 0 0 0 3px rgba(10, 126, 113, 0.12);
+            background-color: #ffffff;
+        }
+
+    .btn-amber-action {
+        background-color: var(--color-amber);
+        color: #173831;
+        border: none;
+        border-radius: 12px;
+        padding: 13px 32px;
+        font-size: 15px;
+        font-weight: 700;
+        font-family: inherit;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        box-shadow: 0 4px 14px rgba(245, 166, 35, 0.28);
+        transition: all 0.2s ease;
+    }
+
+        .btn-amber-action:hover {
+            background-color: var(--color-amber-hover);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 18px rgba(245, 166, 35, 0.38);
+        }
+
+    /* 6. BƯỚC 2: LOADING */
+    .loading-view-wrapper {
+        text-align: center;
+        padding: 60px 16px;
+    }
+
+    .pulse-spinner {
+        display: inline-block;
+        width: 44px;
+        height: 44px;
+        border: 3.5px solid rgba(10, 126, 113, 0.2);
+        border-top-color: var(--color-teal-accent);
+        border-radius: 50%;
+        animation: spinAnim 0.8s linear infinite;
+        margin-bottom: 18px;
+    }
+
+    @@keyframes spinAnim {
+        to {
+            transform: rotate(360deg);
+        }
+    }
+
+    /* 7. BẢNG TỔNG KẾT ĐIỂM SỐ (KHI NỘP BÀI) */
+    .score-summary-banner {
+        background: linear-gradient(135deg, #124035 0%, #0d2e26 100%);
+        border-radius: 20px;
+        padding: 32px 24px;
+        text-align: center;
+        color: #ffffff;
+        box-shadow: 0 12px 30px rgba(13, 46, 38, 0.25);
+        margin-bottom: 28px;
+        animation: slideDown 0.35s ease;
+    }
+
+    @@keyframes slideDown {
+        from {
+            opacity: 0;
+            transform: translateY(-10px);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .score-big-number {
+        font-size: 3.4rem;
+        font-weight: 700;
+        color: #F8CB7C;
+        line-height: 1;
+        margin: 8px 0;
+    }
+
+    .score-message-title {
+        font-size: 1.35rem;
+        font-weight: 700;
+        margin-bottom: 6px;
+    }
+
+    .score-subtext {
+        font-size: 13.5px;
+        color: rgba(255, 255, 255, 0.82);
+        margin-bottom: 20px;
+    }
+
+    .score-actions-group {
+        display: flex;
+        justify-content: center;
+        flex-wrap: wrap;
+        gap: 12px;
+    }
+
+    .btn-banner-light {
+        background: rgba(255, 255, 255, 0.15);
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        color: #ffffff;
+        border-radius: 10px;
+        padding: 9px 20px;
+        font-size: 13.5px;
+        font-weight: 600;
+        font-family: inherit;
+        cursor: pointer;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        transition: all 0.2s ease;
+    }
+
+        .btn-banner-light:hover {
+            background: rgba(255, 255, 255, 0.25);
+            color: #ffffff;
+        }
+
+    .btn-banner-amber {
+        background-color: var(--color-amber);
+        color: #173831;
+        border: none;
+        border-radius: 10px;
+        padding: 9px 20px;
+        font-size: 13.5px;
+        font-weight: 700;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        transition: all 0.2s ease;
+    }
+
+        .btn-banner-amber:hover {
+            background-color: var(--color-amber-hover);
+            transform: translateY(-1px);
+        }
+
+    /* 8. BƯỚC 3: DANH SÁCH CÂU HỎI */
+    .question-card {
+        background: #FAFCFA;
+        border: 1.5px solid var(--color-card-border);
+        border-radius: 18px;
+        padding: 24px;
+        margin-bottom: 20px;
+        transition: all 0.2s ease;
+    }
+
+    .question-badge-num {
+        display: inline-block;
+        background-color: var(--color-mint-light);
+        color: var(--color-teal-accent);
+        border: 1px solid var(--color-mint-border);
+        font-size: 11px;
+        font-weight: 700;
+        padding: 3px 9px;
+        border-radius: 6px;
+        margin-bottom: 10px;
+    }
+
+    .question-title-text {
+        font-size: 1.08rem;
+        font-weight: 600;
+        color: var(--color-text-title);
+        line-height: 1.5;
+        margin-bottom: 18px;
+    }
+
+    .options-list {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .option-label {
+        display: flex;
+        align-items: flex-start;
+        gap: 12px;
+        padding: 13px 16px;
+        border: 1.5px solid var(--color-card-border);
+        border-radius: 12px;
+        background: #ffffff;
+        cursor: pointer;
+        font-size: 14.5px;
+        line-height: 1.45;
+        color: var(--color-text-body);
+        transition: all 0.15s ease;
+        position: relative;
+    }
+
+        .option-label:hover {
+            border-color: var(--color-mint-border);
+            background-color: #F3F8F5;
+        }
+
+        .option-label input[type="radio"] {
+            margin-top: 3px;
+            width: 17px;
+            height: 17px;
+            accent-color: var(--color-teal-accent);
+            cursor: pointer;
+            flex-shrink: 0;
+        }
+
+        /* Trạng thái sau khi nộp bài */
+        .option-label.is-correct {
+            background-color: var(--color-correct-bg) !important;
+            border-color: var(--color-correct-border) !important;
+            color: var(--color-correct-text) !important;
+            font-weight: 600;
+        }
+
+        .option-label.is-wrong {
+            background-color: var(--color-wrong-bg) !important;
+            border-color: var(--color-wrong-border) !important;
+            color: var(--color-wrong-text) !important;
+            font-weight: 600;
+        }
+
+        .option-label.is-dimmed {
+            opacity: 0.55;
+        }
+
+    .explanation-box {
+        display: none;
+        margin-top: 16px;
+        padding: 14px 18px;
+        border-radius: 0 12px 12px 0;
+        border-left: 4px solid var(--color-teal-accent);
+        background-color: var(--color-mint-light);
+        color: var(--color-teal-dark);
+        font-size: 13.5px;
+        line-height: 1.55;
+    }
+
+    /* NÚT NỘP BÀI */
+    .btn-submit-quiz {
+        width: 100%;
+        background-color: var(--color-teal-accent);
+        color: #ffffff;
+        border: none;
+        border-radius: 14px;
+        padding: 14px 28px;
+        font-size: 16px;
+        font-weight: 700;
+        font-family: inherit;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        box-shadow: 0 6px 18px rgba(10, 126, 113, 0.22);
+        transition: all 0.2s ease;
+        margin-top: 24px;
+    }
+
+        .btn-submit-quiz:hover {
+            background-color: #08665B;
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(10, 126, 113, 0.3);
+        }
+</style>
+
+<div class="quiz-container">
+
+    <!-- THANH QUAY LẠI TRANG CHI TIẾT -->
+    <div class="top-nav-bar">
+        <a href="/Document/Details/@Model.Id" class="btn-back-link">
+            <i class="bi bi-arrow-left"></i> Quay lại chi tiết tài liệu
+        </a>
+    </div>
+
+    <!-- KHUNG TỔNG KẾT ĐIỂM SỐ (XUẤT HIỆN SAU KHI NỘP BÀI) -->
+    <div id="quizResultView" class="score-summary-banner hidden">
+        <div class="score-big-number" id="finalScoreDisplay">0 / 0</div>
+        <h3 class="score-message-title font-serif-academic" id="finalResultTitle">Hoàn thành bài kiểm tra!</h3>
+        <p class="score-subtext">Bạn có thể cuộn xuống phía dưới để xem lại đáp án đúng và phần giải thích chi tiết của từng câu hỏi.</p>
+
+        <div class="score-actions-group">
+            <button type="button" class="btn-banner-light" onclick="location.reload()">
+                <i class="bi bi-arrow-counterclockwise"></i> Làm bộ câu hỏi mới
+            </button>
+            <a href="/Document/Details/@Model.Id" class="btn-banner-amber">
+                <i class="bi bi-file-earmark-text"></i> Xem lại tài liệu & Chat AI
+            </a>
+        </div>
+    </div>
+
+    <!-- THẺ CHÍNH -->
+    <div class="academic-card">
+
+        <!-- HEADER -->
+        <div class="quiz-main-header">
+            <div>
+                <span class="tag-ai-badge">
+                    <i class="bi bi-patch-question-fill"></i> AI Training Hub
+                </span>
+                <h1 class="quiz-header-title font-serif-academic">Trắc nghiệm ôn thi tự động</h1>
+                <p class="doc-name-subtitle">
+                    Tài liệu: <strong>@Model.FileName</strong>
+                </p>
+            </div>
+            <div>
+                <a href="/Document" class="btn-library-pill">
+                    <i class="bi bi-book-half"></i> Thư viện mở
+                </a>
+            </div>
+        </div>
+
+        <!-- 1. MÀN HÌNH CẤU HÌNH BAN ĐẦU -->
+        <div id="quizSetupView" class="setup-view-wrapper">
+            <div class="setup-icon-box">
+                <i class="bi bi-lightning-charge-fill"></i>
+            </div>
+            <h2 class="setup-title font-serif-academic">Khởi tạo bài kiểm tra</h2>
+            <p class="setup-desc">
+                Gemini AI sẽ tự động phân tích toàn bộ nội dung của tài liệu này để biên soạn bộ câu hỏi trắc nghiệm bám sát kiến thức trọng tâm nhất.
+            </p>
+
+            <div class="select-count-group">
+                <label class="select-label" for="selectCount">Chọn số lượng câu hỏi:</label>
+                <select id="selectCount" class="custom-select-control">
+                    <option value="5">5 Câu hỏi (Ôn nhanh kiến thức)</option>
+                    <option value="10" selected>10 Câu hỏi (Tiêu chuẩn ôn tập)</option>
+                    <option value="20">20 Câu hỏi (Luyện thi chuyên sâu)</option>
+                </select>
+            </div>
+
+            <button type="button" class="btn-amber-action" onclick="startQuizGeneration('@Model.Id')">
+                <i class="bi bi-magic"></i> Tiến hành tạo Quiz ngay
+            </button>
+        </div>
+
+        <!-- 2. MÀN HÌNH LOADING ĐỢI AI SINH CÂU HỎI -->
+        <div id="quizLoadingView" class="loading-view-wrapper hidden">
+            <div class="pulse-spinner"></div>
+            <h3 class="setup-title font-serif-academic">AI đang đọc hiểu tài liệu...</h3>
+            <p style="font-size: 14px; color: var(--color-text-muted);">
+                Đang bóc tách ý chính và biên soạn phương án trả lời. Vui lòng đợi trong giây lát!
+            </p>
+        </div>
+
+        <!-- 3. MÀN HÌNH LÀM BÀI TRẮC NGHIỆM -->
+        <div id="quizPlayView" class="hidden">
+            <form id="quizForm" onsubmit="submitQuizAnswers(event)">
+                <div id="questionsListContainer"></div>
+
+                <button id="btnSubmitQuiz" type="submit" class="btn-submit-quiz">
+                    <i class="bi bi-check2-all"></i> Nộp bài & Xem điểm số
+                </button>
+            </form>
+        </div>
+
+    </div>
+
+</div>
+
+<!-- JAVASCRIPT XỬ LÝ LOGIC QUIZ (GIỮ NGUYÊN API CONTRACT) -->
+<script>
+    let quizQuestionsCache = [];
+
+    async function startQuizGeneration(documentId) {
+        const count = document.getElementById('selectCount').value;
+
+        // Chuyển màn hình
+        document.getElementById('quizSetupView').classList.add('hidden');
+        document.getElementById('quizLoadingView').classList.remove('hidden');
+
+        try {
+            // Giữ nguyên API contract của bạn
+            const response = await fetch('/api/Document/generate-quiz', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ documentId: documentId, questionCount: parseInt(count) })
+            });
+
+            if (!response.ok) throw new Error("Không thể tạo Quiz từ tài liệu này.");
+
+            quizQuestionsCache = await response.json();
+            renderQuizForm(quizQuestionsCache);
+
+            document.getElementById('quizLoadingView').classList.add('hidden');
+            document.getElementById('quizPlayView').classList.remove('hidden');
+
+        } catch (err) {
+            alert("⚠️ Lỗi: " + err.message);
+            location.reload();
+        }
+    }
+
+    function renderQuizForm(questions) {
+        const container = document.getElementById('questionsListContainer');
+        let html = '';
+
+        questions.forEach((q, index) => {
+            html += `
+                    <div class="question-card quiz-question-item" data-index="${index}" data-correct="${escapeHtml(q.correctAnswer)}">
+                        <span class="question-badge-num">CÂU ${index + 1}</span>
+                        <div class="question-title-text">${escapeHtml(q.questionText)}</div>
+                        <div class="options-list">`;
+
+            q.options.forEach((opt, optIdx) => {
+                const optKey = String.fromCharCode(65 + optIdx); // "A", "B", "C", "D"
+                html += `
+                        <label class="option-label" id="label-${index}-${optKey}">
+                            <input type="radio" name="q_${index}" value="${optKey}" required />
+                            <span>${escapeHtml(opt)}</span>
+                        </label>`;
+            });
+
+            html += `
+                        </div>
+                        <div class="explanation-box" id="explain-${index}">
+                            <strong>💡 Giải thích chi tiết:</strong> ${escapeHtml(q.explanation)}
+                        </div>
+                    </div>`;
+        });
+
+        container.innerHTML = html;
+    }
+
+    function submitQuizAnswers(e) {
+        e.preventDefault();
+        let correctCount = 0;
+        const items = document.querySelectorAll('.quiz-question-item');
+
+        items.forEach((item, index) => {
+            const correctKey = item.getAttribute('data-correct').trim().toUpperCase();
+            const selectedInput = item.querySelector(`input[name="q_${index}"]:checked`);
+            const explanationBox = document.getElementById(`explain-${index}`);
+
+            // Hiện giải thích chi tiết
+            if (explanationBox) {
+                explanationBox.style.display = 'block';
+            }
+
+            const labels = item.querySelectorAll('.option-label');
+            labels.forEach(lbl => {
+                const input = lbl.querySelector('input');
+                const val = input.value.trim().toUpperCase();
+
+                // Tô xanh đáp án đúng
+                if (val === correctKey) {
+                    lbl.classList.add('is-correct');
+                }
+                // Nếu người dùng chọn sai, tô đỏ đáp án đã chọn
+                if (selectedInput && input === selectedInput && val !== correctKey) {
+                    lbl.classList.add('is-wrong');
+                }
+                // Làm mờ các phương án còn lại
+                if (val !== correctKey && (!selectedInput || input !== selectedInput)) {
+                    lbl.classList.add('is-dimmed');
+                }
+
+                input.disabled = true; // Khóa radio
+            });
+
+            if (selectedInput && selectedInput.value.trim().toUpperCase() === correctKey) {
+                correctCount++;
+            }
+        });
+
+        // 1. Cập nhật bảng điểm ở banner trên cùng
+        const total = quizQuestionsCache.length;
+        document.getElementById('finalScoreDisplay').innerText = `${correctCount} / ${total}`;
+
+        let message = "Tuyệt vời! Bạn nắm rất chắc kiến thức.";
+        const ratio = correctCount / total;
+        if (ratio < 0.5) {
+            message = "Bạn cần ôn tập kỹ hơn nội dung tài liệu này nhé!";
+        } else if (ratio < 0.8) {
+            message = "Kết quả khá tốt! Hãy rà soát lại các câu làm sai bên dưới.";
+        }
+        document.getElementById('finalResultTitle').innerText = message;
+
+        // 2. Hiển thị banner kết quả VẪN GIỮ NGUYÊN DANH SÁCH CÂU HỎI ĐỂ HỌC VIÊN ĐỐI CHIẾU
+        document.getElementById('quizResultView').classList.remove('hidden');
+
+        // 3. Ẩn nút nộp bài
+        document.getElementById('btnSubmitQuiz').classList.add('hidden');
+
+        // Cuộn mượt lên đầu trang để xem điểm số
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function escapeHtml(text) {
+        if (!text) return '';
+        return String(text).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    }
+</script>

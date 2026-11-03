@@ -1,0 +1,801 @@
+﻿@{
+    Layout = "_Layout";
+    ViewData["Title"] = "Hỏi Đáp Nhanh Tức Thì";
+}
+
+<style>
+    /* 1. KHUNG TRANG */
+    .ephemeral-page-container {
+        max-width: 860px;
+        margin: 0 auto;
+        padding: 16px 20px 48px 20px;
+    }
+
+    /* Link quay lại */
+    .link-back-library {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 13.5px;
+        font-weight: 600;
+        color: var(--color-text-sub);
+        text-decoration: none;
+        transition: color 0.2s, transform 0.2s;
+    }
+
+        .link-back-library:hover {
+            color: var(--color-teal-accent);
+            transform: translateX(-3px);
+        }
+
+    /* 2. BANNER CẢNH BÁO PHIÊN TẠM THỜI */
+    .ephemeral-warning-bar {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        background: linear-gradient(90deg, #FFF8EC 0%, #FFFAF2 100%);
+        border: 1.5px solid #FDE68A;
+        border-radius: 12px;
+        padding: 10px 16px;
+        font-size: 13px;
+        font-weight: 600;
+        color: #92400E;
+        margin-bottom: 16px;
+    }
+
+        .ephemeral-warning-bar i {
+            color: var(--color-amber);
+            font-size: 16px;
+            flex-shrink: 0;
+        }
+
+    /* 3. THẺ CHÍNH */
+    .academic-card {
+        background: #ffffff;
+        border: 1.5px solid var(--color-card-border);
+        border-radius: 20px;
+        overflow: hidden;
+        box-shadow: 0 6px 20px rgba(18, 64, 53, 0.05);
+    }
+
+    /* Header gradient của card */
+    .card-gradient-header {
+        background: linear-gradient(135deg, #143E34 0%, #0A7E71 100%);
+        padding: 26px 30px;
+        position: relative;
+        overflow: hidden;
+    }
+
+        .card-gradient-header::before {
+            content: '';
+            position: absolute;
+            top: -40px;
+            right: -40px;
+            width: 160px;
+            height: 160px;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.05);
+            pointer-events: none;
+        }
+
+    .header-badge-tag {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 10.5px;
+        font-weight: 700;
+        letter-spacing: 0.6px;
+        text-transform: uppercase;
+        color: #14352F;
+        background: rgba(231, 244, 238, 0.92);
+        border-radius: 100px;
+        padding: 4px 13px;
+        margin-bottom: 12px;
+    }
+
+    .card-header-title {
+        font-size: 1.6rem;
+        font-weight: 700;
+        color: #ffffff;
+        margin: 0 0 6px 0;
+        position: relative;
+        z-index: 1;
+    }
+
+    .card-header-sub {
+        font-size: 13.5px;
+        color: rgba(255,255,255,0.75);
+        margin: 0;
+        position: relative;
+        z-index: 1;
+    }
+
+    .card-body-area {
+        padding: 28px 30px;
+    }
+
+    /* Ẩn/hiện màn hình */
+    .u-hidden {
+        display: none !important;
+    }
+
+    /* 4. DROPZONE TẢI FILE */
+    .upload-dropzone {
+        border: 2px dashed var(--color-mint-border);
+        border-radius: 14px;
+        background: var(--color-mint-light);
+        padding: 36px 20px;
+        text-align: center;
+        cursor: pointer;
+        transition: all 0.22s ease;
+        position: relative;
+        margin-bottom: 20px;
+    }
+
+        .upload-dropzone:hover,
+        .upload-dropzone.dragover {
+            border-color: var(--color-teal-accent);
+            background: #D6EDE5;
+        }
+
+        .upload-dropzone input[type="file"] {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            opacity: 0;
+            cursor: pointer;
+        }
+
+    .dropzone-icon {
+        font-size: 2.8rem;
+        color: var(--color-teal-accent);
+        margin-bottom: 10px;
+        display: block;
+    }
+
+    .dropzone-label {
+        font-size: 15px;
+        font-weight: 700;
+        color: var(--color-text-title);
+        margin-bottom: 4px;
+    }
+
+    .dropzone-hint {
+        font-size: 12px;
+        color: var(--color-text-sub);
+    }
+
+    .dropzone-filename {
+        margin-top: 10px;
+        font-size: 13.5px;
+        font-weight: 600;
+        color: var(--color-teal-accent);
+    }
+
+    /* Nút CTA Amber */
+    .btn-amber-cta {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        width: 100%;
+        background-color: var(--color-amber);
+        color: #173831;
+        border: none;
+        border-radius: 12px;
+        padding: 13px 24px;
+        font-size: 15px;
+        font-weight: 700;
+        font-family: inherit;
+        cursor: pointer;
+        box-shadow: 0 3px 12px rgba(245, 166, 35, 0.25);
+        transition: all 0.2s ease;
+    }
+
+        .btn-amber-cta:hover {
+            background-color: var(--color-amber-hover);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(245, 166, 35, 0.35);
+        }
+
+    /* 5. LOADING SCREEN */
+    .loading-screen {
+        text-align: center;
+        padding: 48px 20px;
+    }
+
+    .loading-spinner {
+        width: 46px;
+        height: 46px;
+        margin: 0 auto 18px;
+        border: 3.5px solid rgba(10, 126, 113, 0.2);
+        border-top-color: var(--color-teal-accent);
+        border-radius: 50%;
+        animation: spinAnim 0.8s linear infinite;
+    }
+
+    @@keyframes spinAnim {
+        to {
+            transform: rotate(360deg);
+        }
+    }
+
+    .loading-title {
+        font-size: 1.1rem;
+        font-weight: 700;
+        color: var(--color-teal-dark);
+        margin-bottom: 6px;
+    }
+
+    .loading-sub {
+        font-size: 13px;
+        color: var(--color-text-sub);
+        margin: 0;
+    }
+
+    /* 6. CHAT VIEW HEADER */
+    .chat-view-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding-bottom: 14px;
+        margin-bottom: 16px;
+        border-bottom: 1.5px solid var(--color-card-border);
+        flex-wrap: wrap;
+        gap: 12px;
+    }
+
+    .chat-doc-info-title {
+        font-size: 1.05rem;
+        font-weight: 700;
+        color: var(--color-teal-dark);
+        margin: 0 0 2px 0;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .chat-doc-info-sub {
+        font-size: 11.5px;
+        color: var(--color-text-sub);
+    }
+
+    /* Nút kết thúc phiên */
+    .btn-end-session {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        background: #FFF5F5;
+        color: #DC2626;
+        border: 1.5px solid #FCA5A5;
+        border-radius: 100px;
+        padding: 6px 16px;
+        font-size: 12.5px;
+        font-weight: 700;
+        font-family: inherit;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        white-space: nowrap;
+    }
+
+        .btn-end-session:hover {
+            background-color: #FEE2E2;
+            border-color: #F87171;
+            transform: translateY(-1px);
+        }
+
+    /* 7. CHAT BUBBLE STREAM */
+    .chat-bubble-stream {
+        height: 420px;
+        overflow-y: auto;
+        background: #F8FAF9;
+        border: 1.5px solid var(--color-card-border);
+        border-radius: 14px;
+        padding: 14px 12px;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        margin-bottom: 14px;
+        scrollbar-width: thin;
+        scrollbar-color: #C8E5D8 transparent;
+    }
+
+        .chat-bubble-stream::-webkit-scrollbar {
+            width: 4px;
+        }
+
+        .chat-bubble-stream::-webkit-scrollbar-thumb {
+            background-color: #C8E5D8;
+            border-radius: 10px;
+        }
+
+    /* Trạng thái rỗng */
+    .chat-empty-state {
+        text-align: center;
+        margin: auto;
+        padding: 20px 10px;
+    }
+
+        .chat-empty-state i {
+            font-size: 2.2rem;
+            color: #C8E5D8;
+            display: block;
+            margin-bottom: 8px;
+        }
+
+        .chat-empty-state p {
+            font-size: 13px;
+            color: var(--color-text-sub);
+            margin: 0;
+        }
+
+    /* Hàng bong bóng */
+    .bubble-row {
+        display: flex;
+        align-items: flex-end;
+        gap: 7px;
+        width: 100%;
+        animation: bubblePop 0.2s ease;
+    }
+
+    @@keyframes bubblePop {
+        from {
+            opacity: 0;
+            transform: translateY(5px);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .user-row {
+        justify-content: flex-end;
+    }
+
+    .assistant-row {
+        justify-content: flex-start;
+    }
+
+    /* Avatar */
+    .chat-avatar {
+        width: 26px;
+        height: 26px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 11px;
+        flex-shrink: 0;
+        box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+    }
+
+    .user-avatar {
+        background: linear-gradient(135deg, var(--color-teal-accent) 0%, #16A08F 100%);
+        color: #ffffff;
+    }
+
+    .ai-avatar {
+        background: linear-gradient(135deg, #124035 0%, #0d2e26 100%);
+        color: #F8CB7C;
+    }
+
+    /* Nội dung bong bóng */
+    .bubble-content {
+        max-width: 84%;
+        padding: 9px 13px;
+        font-size: 13.5px;
+        line-height: 1.5;
+        word-break: break-word;
+        box-shadow: 0 1px 4px rgba(18,64,53,0.04);
+    }
+
+    .user-bubble {
+        background-color: var(--color-teal-accent);
+        color: #ffffff;
+        border-radius: 14px 14px 3px 14px;
+    }
+
+    .assistant-bubble {
+        background-color: #ffffff;
+        color: var(--color-text-title);
+        border: 1.5px solid var(--color-card-border);
+        border-radius: 14px 14px 14px 3px;
+    }
+
+    /* Spinner nhỏ trong bong bóng chờ */
+    .bubble-spinner {
+        display: inline-block;
+        width: 11px;
+        height: 11px;
+        border: 2px solid rgba(10,126,113,0.25);
+        border-top-color: var(--color-teal-accent);
+        border-radius: 50%;
+        animation: spinAnim 0.75s linear infinite;
+        vertical-align: middle;
+        margin-right: 5px;
+    }
+
+    /* 8. THANH NHẬP LIỆU CHAT */
+    .chat-input-bar {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        background: #ffffff;
+        border: 1.5px solid var(--color-card-border);
+        border-radius: 12px;
+        padding: 5px 6px 5px 14px;
+        box-shadow: 0 2px 8px rgba(18,64,53,0.03);
+        transition: all 0.2s ease;
+    }
+
+        .chat-input-bar:focus-within {
+            border-color: var(--color-teal-accent);
+            box-shadow: 0 0 0 2.5px rgba(10,126,113,0.12);
+        }
+
+    .chat-text-input {
+        border: none;
+        outline: none;
+        width: 100%;
+        font-family: inherit;
+        font-size: 13.5px;
+        color: var(--color-text-title);
+        background: transparent;
+    }
+
+        .chat-text-input::placeholder {
+            color: #9DB0AA;
+        }
+
+    .btn-send-msg {
+        background-color: var(--color-teal-accent);
+        color: #ffffff;
+        border: none;
+        border-radius: 9px;
+        padding: 8px 16px;
+        font-size: 13px;
+        font-weight: 700;
+        font-family: inherit;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        white-space: nowrap;
+        transition: all 0.2s ease;
+    }
+
+        .btn-send-msg:hover {
+            background-color: #08665B;
+            transform: translateY(-1px);
+        }
+
+        .btn-send-msg:disabled {
+            background-color: #E5ECE8;
+            color: #9DB0AA;
+            cursor: not-allowed;
+            transform: none;
+        }
+</style>
+
+<div class="ephemeral-page-container">
+
+    <!-- Thanh nav trên cùng -->
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; flex-wrap: wrap; gap: 10px;">
+        <a href="/Document" class="link-back-library">
+            <i class="bi bi-arrow-left"></i> Trở về Thư viện mở
+        </a>
+    </div>
+
+    <!-- Banner cảnh báo phiên tạm -->
+    <div class="ephemeral-warning-bar">
+        <i class="bi bi-clock-history"></i>
+        <span><strong>Phiên làm việc tạm thời</strong> — Toàn bộ file, vector và dữ liệu sẽ tự động xóa sạch khi bạn đóng trang hoặc kết thúc phiên.</span>
+    </div>
+
+    <!-- KHUNG CARD CHÍNH -->
+    <div class="academic-card">
+
+        <!-- Header gradient -->
+        <div class="card-gradient-header">
+            <div class="header-badge-tag">
+                <i class="bi bi-lightning-charge-fill"></i> Ephemeral RAG Chat
+            </div>
+            <h1 class="card-header-title font-serif-academic">Hỏi đáp nhanh không lưu trữ</h1>
+            <p class="card-header-sub">Tải lên tài liệu bất kỳ, AI sẽ nhúng vector tạm thời và sẵn sàng trả lời câu hỏi ngay lập tức.</p>
+        </div>
+
+        <div class="card-body-area">
+
+            <!-- ══════════ SETUP SCREEN ══════════ -->
+            <div id="ephemeralSetupView">
+                <form id="setupForm" onsubmit="initEphemeralSession(event)">
+
+                    <div class="upload-dropzone" id="uploadZone">
+                        <input type="file"
+                               id="ephemeralFileInput"
+                               accept=".pdf"
+                               onchange="previewFile(this)"
+                               required />
+                        <i class="bi bi-cloud-arrow-up dropzone-icon"></i>
+                        <div class="dropzone-label">Chọn hoặc kéo thả file PDF vào đây</div>
+                        <div class="dropzone-hint">Hỗ trợ tài liệu nghiên cứu, sách giáo khoa, slide (.pdf)</div>
+                        <div class="dropzone-filename u-hidden" id="fileLabelDisplay"></div>
+                    </div>
+
+                    <button type="submit" class="btn-amber-cta">
+                        <i class="bi bi-play-fill"></i>
+                        Bắt đầu phiên Hỏi Đáp Nhanh
+                    </button>
+                </form>
+            </div>
+
+            <!-- ══════════ LOADING SCREEN ══════════ -->
+            <div id="ephemeralLoadingView" class="loading-screen u-hidden">
+                <div class="loading-spinner"></div>
+                <div class="loading-title font-serif-academic">Đang bóc tách & tạo Embedding Vector...</div>
+                <p class="loading-sub">Hệ thống đang phân tích ngữ nghĩa tài liệu vào cơ sở dữ liệu vector tạm thời. Vui lòng chờ trong giây lát.</p>
+            </div>
+
+            <!-- ══════════ CHAT VIEW ══════════ -->
+            <div id="ephemeralChatView" class="u-hidden">
+
+                <!-- Header chat -->
+                <div class="chat-view-header">
+                    <div>
+                        <div class="chat-doc-info-title font-serif-academic">
+                            <i class="bi bi-file-earmark-pdf-fill" style="color: #DC2626;"></i>
+                            <span id="activeFileNameTitle">TaiLieu.pdf</span>
+                        </div>
+                        <div class="chat-doc-info-sub">Đang kết nối với cơ sở dữ liệu vector tạm thời.</div>
+                    </div>
+                    <button type="button" class="btn-end-session" onclick="endEphemeralSession()">
+                        <i class="bi bi-trash-fill"></i>
+                        Kết thúc & Xóa phiên
+                    </button>
+                </div>
+
+                <!-- Khung chat bubble -->
+                <div class="chat-bubble-stream" id="chatMessagesContainer">
+                    <div class="chat-empty-state" id="chatWelcomeMsg">
+                        <i class="bi bi-chat-quote-fill"></i>
+                        <p class="font-serif-academic" style="font-weight: 700; color: var(--color-teal-dark); font-size: 14px; margin-bottom: 4px;">Tài liệu đã sẵn sàng!</p>
+                        <p>Hãy đặt câu hỏi bất kỳ về nội dung bên trong.</p>
+                    </div>
+                </div>
+
+                <!-- Thanh nhập liệu -->
+                <form onsubmit="sendEphemeralMessage(event)">
+                    <div class="chat-input-bar">
+                        <input type="text"
+                               id="txtUserQuery"
+                               class="chat-text-input"
+                               placeholder="Nhập câu hỏi của bạn về tài liệu..."
+                               autocomplete="off"
+                               required />
+                        <button type="submit" class="btn-send-msg" id="btnSendMsg">
+                            <i class="bi bi-send-fill"></i>
+                            Gửi
+                        </button>
+                    </div>
+                </form>
+
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<!-- JAVASCRIPT XỬ LÝ EPHEMERAL CHAT & STREAMING RAG -->
+<script>
+    let currentEphemeralDocId = null;
+
+    // ── Drag & Drop ──
+    const uploadZone = document.getElementById('uploadZone');
+
+    uploadZone.addEventListener('dragover', e => {
+        e.preventDefault();
+        uploadZone.classList.add('dragover');
+    });
+    uploadZone.addEventListener('dragleave', () => {
+        uploadZone.classList.remove('dragover');
+    });
+    uploadZone.addEventListener('drop', e => {
+        e.preventDefault();
+        uploadZone.classList.remove('dragover');
+        const file = e.dataTransfer.files[0];
+        if (file) {
+            const input = document.getElementById('ephemeralFileInput');
+            const dt = new DataTransfer();
+            dt.items.add(file);
+            input.files = dt.files;
+            showFileName(file.name);
+        }
+    });
+
+    function previewFile(input) {
+        if (input.files && input.files[0]) {
+            showFileName(input.files[0].name);
+        }
+    }
+
+    function showFileName(name) {
+        const el = document.getElementById('fileLabelDisplay');
+        el.textContent = '📄 Đã chọn: ' + name;
+        el.classList.remove('u-hidden');
+    }
+
+    // ── Chuyển màn hình ──
+    function showScreen(name) {
+        document.getElementById('ephemeralSetupView').classList.add('u-hidden');
+        document.getElementById('ephemeralLoadingView').classList.add('u-hidden');
+        document.getElementById('ephemeralChatView').classList.add('u-hidden');
+        document.getElementById('ephemeral' + name + 'View').classList.remove('u-hidden');
+    }
+
+    // ── Khởi tạo phiên Ephemeral ──
+    async function initEphemeralSession(event) {
+        event.preventDefault();
+        const fileInput = document.getElementById('ephemeralFileInput');
+        if (!fileInput.files || fileInput.files.length === 0) return;
+
+        const formData = new FormData();
+        formData.append('file', fileInput.files[0]);
+
+        showScreen('Loading');
+
+        try {
+            const res = await fetch('/api/Document/ephemeral/init', {
+                method: 'POST',
+                body: formData
+            });
+
+            if (!res.ok) throw new Error(await res.text() || 'Không thể khởi tạo phiên.');
+
+            const data = await res.json();
+            currentEphemeralDocId = data.documentId;
+            document.getElementById('activeFileNameTitle').innerText = data.fileName;
+
+            showScreen('Chat');
+
+        } catch (err) {
+            alert('⚠️ Lỗi: ' + err.message);
+            location.reload();
+        }
+    }
+
+    // ── Gửi tin nhắn và nhận stream ──
+    async function sendEphemeralMessage(event) {
+        event.preventDefault();
+
+        const input = document.getElementById('txtUserQuery');
+        const btnSend = document.getElementById('btnSendMsg');
+        const question = input.value.trim();
+        if (!question || !currentEphemeralDocId) return;
+
+        // Ẩn trạng thái chào mừng
+        const welcomeMsg = document.getElementById('chatWelcomeMsg');
+        if (welcomeMsg) welcomeMsg.remove();
+
+        input.value = '';
+        input.disabled = true;
+        btnSend.disabled = true;
+
+        const container = document.getElementById('chatMessagesContainer');
+
+        // Bong bóng người dùng
+        appendUserBubble(container, question);
+        scrollChat(container);
+
+        // Bong bóng AI đang chờ
+        const bubbleId = 'ai_' + Date.now();
+        appendAIPlaceholder(container, bubbleId);
+        scrollChat(container);
+
+        try {
+            const res = await fetch('/api/Document/ephemeral/chat-stream', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    documentId: currentEphemeralDocId,
+                    question: question
+                })
+            });
+
+            if (!res.ok) throw new Error('Lỗi kết nối streaming.');
+
+            const reader = res.body.getReader();
+            const decoder = new TextDecoder();
+            let fullText = '';
+            const bubbleEl = document.getElementById(bubbleId);
+
+            while (true) {
+                const { value, done } = await reader.read();
+                if (done) break;
+
+                const lines = decoder.decode(value, { stream: true }).split('\n');
+                for (const line of lines) {
+                    if (!line.startsWith('data: ')) continue;
+                    try {
+                        const parsed = JSON.parse(line.substring(6));
+                        if (parsed.done) break;
+                        if (parsed.text) {
+                            fullText += parsed.text;
+                            bubbleEl.innerText = fullText;
+                            scrollChat(container);
+                        }
+                        if (parsed.error) {
+                            bubbleEl.innerText = '⚠️ ' + parsed.error;
+                        }
+                    } catch (e) { }
+                }
+            }
+
+        } catch (err) {
+            const bubbleEl = document.getElementById(bubbleId);
+            if (bubbleEl) bubbleEl.innerText = '⚠️ Lỗi phản hồi từ AI: ' + err.message;
+        } finally {
+            input.disabled = false;
+            btnSend.disabled = false;
+            input.focus();
+            scrollChat(container);
+        }
+    }
+
+    function appendUserBubble(container, text) {
+        const row = document.createElement('div');
+        row.className = 'bubble-row user-row';
+        row.innerHTML = `
+                <div class="bubble-content user-bubble">${escapeHtml(text)}</div>
+                <div class="chat-avatar user-avatar" title="Bạn"><i class="bi bi-person-fill"></i></div>
+            `;
+        container.appendChild(row);
+    }
+
+    function appendAIPlaceholder(container, id) {
+        const row = document.createElement('div');
+        row.className = 'bubble-row assistant-row';
+        row.innerHTML = `
+                <div class="chat-avatar ai-avatar" title="Trợ lý AI"><i class="bi bi-robot"></i></div>
+                <div class="bubble-content assistant-bubble" id="${id}">
+                    <span class="bubble-spinner"></span>
+                    <span style="font-size: 12.5px; color: var(--color-text-sub);">Đang tìm kiếm trong tài liệu...</span>
+                </div>
+            `;
+        container.appendChild(row);
+    }
+
+    function scrollChat(container) {
+        container.scrollTop = container.scrollHeight;
+    }
+
+    // ── Kết thúc & dọn dẹp phiên ──
+    async function endEphemeralSession() {
+        if (!confirm('Bạn có chắc muốn kết thúc phiên và xóa toàn bộ dữ liệu tạm thời không?')) return;
+
+        if (currentEphemeralDocId) {
+            try {
+                await fetch(`/api/Document/ephemeral/cleanup/${currentEphemeralDocId}`, { method: 'DELETE' });
+            } catch (e) { }
+            currentEphemeralDocId = null;
+        }
+        location.reload();
+    }
+
+    // ── Tự động dọn dẹp khi đóng tab ──
+    window.addEventListener('beforeunload', () => {
+        if (currentEphemeralDocId) {
+            navigator.sendBeacon(`/api/Document/ephemeral/cleanup/${currentEphemeralDocId}`);
+        }
+    });
+
+    function escapeHtml(text) {
+        if (!text) return '';
+        return String(text)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;');
+    }
+</script>

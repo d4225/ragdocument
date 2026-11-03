@@ -472,5 +472,353 @@ namespace SmartDocumentRAG.API.Controllers
             var summaryResult = await _geminiService.GenerateAnswerAsync(prompt);
             return Ok(new { summary = summaryResult });
         }
+        // 1. Trang giao diện Tạo Quiz độc lập (URL: /Document/StandaloneQuiz)
+        [HttpGet("Document/StandaloneQuiz")]
+        [ApiExplorerSettings(IgnoreApi = true)]
+        public IActionResult StandaloneQuiz()
+        {
+            var userIdString = HttpContext.Session.GetString("UserId");
+            if (string.IsNullOrEmpty(userIdString))
+            {
+                return RedirectToAction("Login", "Account");
+            }
+
+            return View(); // Trỏ tới Views/Document/StandaloneQuiz.cshtml
+        }
+
+        // DTO nhận yêu cầu tạo quiz từ file tạm
+        public class StandaloneQuizRequestDto
+        {
+            public IFormFile? File { get; set; }
+            public int QuestionCount { get; set; } = 10;
+        }
+
+        // 2. API: Nhận file tạm, phân tích và trả về bộ Quiz trực tiếp
+        [HttpPost("api/Document/generate-standalone-quiz")]
+        public async Task<IActionResult> GenerateStandaloneQuiz([FromForm] StandaloneQuizRequestDto request)
+        {
+            var userIdString = HttpContext.Session.GetString("UserId");
+            if (string.IsNullOrEmpty(userIdString)) return Unauthorized();
+
+            if (request.File == null || request.File.Length == 0)
+            {
+                return BadRequest("Vui lòng tải lên một tệp tài liệu.");
+            }
+
+            if (!request.File.FileName.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase))
+            {
+                return BadRequest("Chỉ chấp nhận định dạng file PDF.");
+            }
+
+            // Lưu file tạm vào thư mục Uploads hoặc thư mục Temp riêng biệt
+            var tempFolder = Path.Combine(_env.ContentRootPath, "Uploads", "Temp");
+            if (!Directory.Exists(tempFolder)) Directory.CreateDirectory(tempFolder);
+
+            var tempFileName = $"{Guid.NewGuid()}_{request.File.FileName}";
+            var tempFilePath = Path.Combine(tempFolder, tempFileName);
+
+            try
+            {
+                using (var stream = new FileStream(tempFilePath, FileMode.Create))
+                {
+                    await request.File.CopyToAsync(stream);
+                }
+
+                // Trích xuất văn bản trực tiếp từ file PDF tạm thời
+                string extractedText = ExtractTextFromPdfFile(tempFilePath);
+
+                if (string.IsNullOrWhiteSpace(extractedText))
+                {
+                    return BadRequest("Không thể trích xuất văn bản từ tài liệu này.");
+                }
+
+                // Gọi Gemini AI sinh bộ câu hỏi Quiz dựa trên nội dung text vừa đọc
+                var quizQuestions = await _geminiService.GenerateQuizAsync(extractedText, request.QuestionCount);
+
+                if (quizQuestions == null || !quizQuestions.Any())
+                {
+                    return BadRequest("Không thể tạo Quiz từ nội dung tài liệu này. Vui lòng thử lại.");
+                }
+
+                return Ok(quizQuestions);
+            }
+            finally
+            {
+                // Dọn dẹp: Xóa file tạm ngay sau khi xử lý xong (hoặc giữ lại tùy nhu cầu phiên làm việc)
+                if (System.IO.File.Exists(tempFilePath))
+                {
+                    System.IO.File.Delete(tempFilePath);
+                }
+            }
+        }
+
+        // Hàm hỗ trợ bóc tách text nhanh từ file PDF tạm
+        private string ExtractTextFromPdfFile(string filePath)
+        {
+            using var pdf = UglyToad.PdfPig.PdfDocument.Open(filePath);
+            var sb = new StringBuilder();
+            foreach (var page in pdf.GetPages())
+            {
+                sb.AppendLine(page.Text);
+            }
+            // Giới hạn độ dài text gửi lên AI để tránh vượt quá token window nếu file quá dày
+            var fullText = sb.ToString();
+            return fullText.Length > 25000 ? fullText.Substring(0, 25000) : fullText;
+        }
+        // 1. Trang giao diện Tóm tắt độc lập (URL: /Document/StandaloneSummary)
+        [HttpGet("Document/StandaloneSummary")]
+        [ApiExplorerSettings(IgnoreApi = true)]
+        public IActionResult StandaloneSummary()
+        {
+            var userIdString = HttpContext.Session.GetString("UserId");
+            if (string.IsNullOrEmpty(userIdString))
+            {
+                return RedirectToAction("Login", "Account");
+            }
+
+            return View(); // Trỏ tới Views/Document/StandaloneSummary.cshtml
+        }
+
+        // DTO nhận yêu cầu tóm tắt file tạm
+        public class StandaloneSummaryRequestDto
+        {
+            public IFormFile? File { get; set; }
+            public string SummaryStyle { get; set; } = "bullets";
+        }
+
+        // 2. API: Nhận file tạm, phân tích text và gọi Gemini tóm tắt
+        [HttpPost("api/Document/generate-standalone-summary")]
+        public async Task<IActionResult> GenerateStandaloneSummary([FromForm] StandaloneSummaryRequestDto request)
+        {
+            var userIdString = HttpContext.Session.GetString("UserId");
+            if (string.IsNullOrEmpty(userIdString)) return Unauthorized();
+
+            if (request.File == null || request.File.Length == 0)
+            {
+                return BadRequest("Vui lòng tải lên một tệp tài liệu.");
+            }
+
+            if (!request.File.FileName.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase))
+            {
+                return BadRequest("Chỉ chấp nhận định dạng file PDF.");
+            }
+
+            // Lưu file tạm vào thư mục Uploads/Temp
+            var tempFolder = Path.Combine(_env.ContentRootPath, "Uploads", "Temp");
+            if (!Directory.Exists(tempFolder)) Directory.CreateDirectory(tempFolder);
+
+            var tempFileName = $"{Guid.NewGuid()}_{request.File.FileName}";
+            var tempFilePath = Path.Combine(tempFolder, tempFileName);
+
+            try
+            {
+                using (var stream = new FileStream(tempFilePath, FileMode.Create))
+                {
+                    await request.File.CopyToAsync(stream);
+                }
+
+                // Trích xuất văn bản từ file PDF tạm
+                string extractedText = ExtractTextFromPdfFile(tempFilePath);
+
+                if (string.IsNullOrWhiteSpace(extractedText))
+                {
+                    return BadRequest("Không thể trích xuất văn bản từ tài liệu này.");
+                }
+
+                string styleInstruction = request.SummaryStyle switch
+                {
+                    "bullets" => "Trình bày kết quả tóm tắt dưới dạng các gạch đầu dòng (bullet points) rõ ràng, súc tích.",
+                    "keypoints" => "Liệt kê các ý chính cốt lõi nhất (Key takeaways) và từ khóa quan trọng.",
+                    "paragraph" => "Trình bày kết quả dưới dạng các đoạn văn xuôi mạch lạc, mang văn phong học thuật.",
+                    _ => "Tóm tắt ngắn gọn."
+                };
+
+                var prompt = $"""
+                Bạn là một trợ lý AI phân tích tài liệu học tập chuyên nghiệp. 
+                Yêu cầu: {styleInstruction}
+                Giữ lại đầy đủ các thông tin cốt lõi, không bịa đặt thêm thông tin ngoài văn bản gốc.
+
+                VĂN BẢN GỐC CẦN TÓM TẮT:
+                {extractedText}
+                """;
+
+                var summaryResult = await _geminiService.GenerateAnswerAsync(prompt);
+                return Ok(new { summary = summaryResult });
+            }
+            finally
+            {
+                // Dọn dẹp: Xóa file tạm ngay sau khi xử lý xong phiên làm việc
+                if (System.IO.File.Exists(tempFilePath))
+                {
+                    System.IO.File.Delete(tempFilePath);
+                }
+            }
+        }
+        // 1. Trang giao diện Hỏi đáp nhanh độc lập (URL: /Document/EphemeralChat)
+        [HttpGet("Document/EphemeralChat")]
+        [ApiExplorerSettings(IgnoreApi = true)]
+        public IActionResult EphemeralChat()
+        {
+            var userIdString = HttpContext.Session.GetString("UserId");
+            if (string.IsNullOrEmpty(userIdString))
+            {
+                return RedirectToAction("Login", "Account");
+            }
+
+            return View(); // Trỏ tới Views/Document/EphemeralChat.cshtml
+        }
+
+        // DTO nhận file upload tạm cho phiên chat nhanh
+        public class EphemeralInitRequestDto
+        {
+            public IFormFile? File { get; set; }
+        }
+
+        // 2. API: Khởi tạo phiên chat nhanh, bóc tách và embedding vector tạm thời
+        [HttpPost("api/Document/ephemeral/init")]
+        public async Task<IActionResult> InitEphemeralChat([FromForm] EphemeralInitRequestDto request)
+        {
+            var userIdString = HttpContext.Session.GetString("UserId");
+            if (string.IsNullOrEmpty(userIdString)) return Unauthorized();
+
+            if (request.File == null || request.File.Length == 0)
+            {
+                return BadRequest("Vui lòng tải lên tài liệu PDF.");
+            }
+
+            if (!request.File.FileName.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase))
+            {
+                return BadRequest("Chỉ chấp nhận định dạng file PDF.");
+            }
+
+            Guid userId = Guid.Parse(userIdString);
+            Guid ephemeralDocId = Guid.NewGuid();
+
+            // Lưu file tạm vào thư mục Uploads/Temp
+            var tempFolder = Path.Combine(_env.ContentRootPath, "Uploads", "Temp");
+            if (!Directory.Exists(tempFolder)) Directory.CreateDirectory(tempFolder);
+
+            var tempFileName = $"{ephemeralDocId}_{request.File.FileName}";
+            var tempFilePath = Path.Combine(tempFolder, tempFileName);
+
+            using (var stream = new FileStream(tempFilePath, FileMode.Create))
+            {
+                await request.File.CopyToAsync(stream);
+            }
+
+            // Tạo một bản ghi Document tạm trong Database để tận dụng hệ thống Embedding & Retrieval sẵn có
+            var tempDoc = new Document
+            {
+                Id = ephemeralDocId,
+                UserId = userId,
+                FileName = request.File.FileName,
+                FilePath = tempFilePath,
+                UploadedAt = DateTime.UtcNow,
+                Status = "Processing"
+            };
+
+            _db.Documents.Add(tempDoc);
+            await _db.SaveChangesAsync();
+
+            try
+            {
+                // Thực hiện bóc tách PDF và tạo vector embedding ngay lập tức cho phiên này
+                var processor = HttpContext.RequestServices.GetRequiredService<DocumentProcessingJob>();
+                await processor.ProcessPdfAsync(ephemeralDocId); // Hàm xử lý parse và tạo chunks + vector
+
+                return Ok(new { documentId = ephemeralDocId, fileName = request.File.FileName });
+            }
+            catch (Exception ex)
+            {
+                // Xóa bản ghi và file nếu lỗi
+                _db.Documents.Remove(tempDoc);
+                await _db.SaveChangesAsync();
+                if (System.IO.File.Exists(tempFilePath)) System.IO.File.Delete(tempFilePath);
+
+                return BadRequest("Lỗi xử lý tài liệu tạm: " + ex.Message);
+            }
+        }
+
+        // DTO yêu cầu câu hỏi chat nhanh
+        public class EphemeralChatRequestDto
+        {
+            public Guid DocumentId { get; set; }
+            public string Question { get; set; } = string.Empty;
+        }
+
+        // 3. API: Hỏi đáp RAG thời gian thực dựa trên tài liệu tạm (Stream SSE)
+        [HttpPost("api/Document/ephemeral/chat-stream")]
+        public async Task EphemeralChatStream([FromBody] EphemeralChatRequestDto request, CancellationToken cancellationToken)
+        {
+            Response.ContentType = "text/event-stream";
+            Response.Headers.Append("Cache-Control", "no-cache");
+            Response.Headers.Append("Connection", "keep-alive");
+
+            try
+            {
+                // Sử dụng RetrievalService tìm kiếm các đoạn chunk vector liên quan trong tài liệu tạm
+                var topChunks = await _retrievalService.GetRelevantParentChunksAsync(
+                    request.Question,
+                    topK: 5,
+                    documentIds: new List<Guid> { request.DocumentId }
+                );
+
+                var contextBuilder = new StringBuilder();
+                foreach (var chunk in topChunks)
+                {
+                    contextBuilder.AppendLine(chunk.Content);
+                    contextBuilder.AppendLine();
+                }
+
+                var systemPrompt = $"""
+                Bạn là trợ lý AI thông minh. Hãy trả lời câu hỏi dựa hoàn toàn vào NGỮ CẢNH TÀI LIỆU tạm thời dưới đây.
+                Nếu thông tin không có trong ngữ cảnh, hãy trả lời "Tài liệu không đề cập đến vấn đề này."
+
+                NGỮ CẢNH TÀI LIỆU:
+                {contextBuilder}
+
+                CÂU HỎI:
+                {request.Question}
+                """;
+
+                await foreach (var chunk in _geminiService.StreamAnswerAsync(systemPrompt).WithCancellation(cancellationToken))
+                {
+                    var data = JsonSerializer.Serialize(new { text = chunk });
+                    await Response.WriteAsync($"data: {data}\n\n", cancellationToken);
+                    await Response.Body.FlushAsync(cancellationToken);
+                }
+
+                var endData = JsonSerializer.Serialize(new { done = true });
+                await Response.WriteAsync($"data: {endData}\n\n", cancellationToken);
+                await Response.Body.FlushAsync(cancellationToken);
+            }
+            catch (Exception ex)
+            {
+                var errData = JsonSerializer.Serialize(new { error = ex.Message });
+                await Response.WriteAsync($"data: {errData}\n\n", cancellationToken);
+                await Response.Body.FlushAsync(cancellationToken);
+            }
+        }
+
+        // 4. API: Dọn dẹp và xóa sạch tài liệu tạm, vector, file khi người dùng rời phiên hoặc kết thúc
+        [HttpDelete("api/Document/ephemeral/cleanup/{id:guid}")]
+        public async Task<IActionResult> CleanupEphemeralSession(Guid id)
+        {
+            var doc = await _db.Documents.FindAsync(id);
+            if (doc != null)
+            {
+                // Xóa file vật lý tạm
+                if (!string.IsNullOrEmpty(doc.FilePath) && System.IO.File.Exists(doc.FilePath))
+                {
+                    System.IO.File.Delete(doc.FilePath);
+                }
+
+                // Xóa bản ghi Document (Cascade delete sẽ tự động xóa các DocumentChunks và Vector embeddings liên quan nếu đã cấu hình)
+                _db.Documents.Remove(doc);
+                await _db.SaveChangesAsync();
+            }
+
+            return Ok(new { message = "Đã dọn dẹp sạch dữ liệu phiên." });
+        }
     }
 }

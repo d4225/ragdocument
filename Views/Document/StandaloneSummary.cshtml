@@ -1,0 +1,644 @@
+﻿@{
+    Layout = "_Layout";
+    ViewData["Title"] = "Tóm tắt Văn bản";
+}
+
+<style>
+    /* ── Page Container ── */
+    .standalone-summary-page {
+        max-width: 900px;
+        margin: 0 auto;
+        padding: 20px 20px 56px;
+    }
+
+    /* ── Link quay lại ── */
+    .link-back-library {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 13.5px;
+        font-weight: 600;
+        color: var(--color-text-sub);
+        text-decoration: none;
+        margin-bottom: 20px;
+        transition: color 0.2s, transform 0.2s;
+    }
+
+        .link-back-library:hover {
+            color: var(--color-teal-accent);
+            transform: translateX(-3px);
+        }
+
+    /* ── Academic Card ── */
+    .academic-card {
+        background: #ffffff;
+        border: 1.5px solid var(--color-card-border);
+        border-radius: 20px;
+        overflow: hidden;
+        box-shadow: 0 6px 20px rgba(10, 126, 113, 0.07);
+    }
+
+    /* ── Card Header gradient ── */
+    .academic-card-header {
+        background: linear-gradient(135deg, #143E34 0%, #0A7E71 100%);
+        padding: 28px 32px;
+        position: relative;
+        overflow: hidden;
+    }
+
+        .academic-card-header::before {
+            content: '';
+            position: absolute;
+            top: -40px;
+            right: -40px;
+            width: 180px;
+            height: 180px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.05);
+            pointer-events: none;
+        }
+
+    .badge-ai-tag {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 10.5px;
+        font-weight: 700;
+        letter-spacing: 0.6px;
+        text-transform: uppercase;
+        color: #14352F;
+        background: rgba(231, 244, 238, 0.92);
+        border-radius: 100px;
+        padding: 4px 13px;
+        margin-bottom: 12px;
+    }
+
+    .card-header-title {
+        font-size: 1.65rem;
+        font-weight: 700;
+        color: #ffffff;
+        margin: 0 0 6px 0;
+        position: relative;
+        z-index: 1;
+    }
+
+    .card-header-subtitle {
+        font-size: 13.5px;
+        color: rgba(255, 255, 255, 0.75);
+        margin: 0;
+        position: relative;
+        z-index: 1;
+    }
+
+    /* ── Card Body ── */
+    .academic-card-body {
+        padding: 30px 32px;
+    }
+
+    /* ── Ẩn/hiện màn hình ── */
+    .u-hidden {
+        display: none !important;
+    }
+
+    /* ══════════════════
+           SETUP SCREEN
+        ══════════════════ */
+    .field-label {
+        display: block;
+        font-size: 11.5px;
+        font-weight: 700;
+        color: var(--color-text-sub);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-bottom: 8px;
+    }
+
+    /* Dropzone */
+    .upload-zone {
+        border: 2px dashed var(--color-mint-border);
+        border-radius: 14px;
+        background: var(--color-mint-light);
+        padding: 36px 20px;
+        text-align: center;
+        cursor: pointer;
+        transition: all 0.22s ease;
+        position: relative;
+        margin-bottom: 22px;
+    }
+
+        .upload-zone:hover,
+        .upload-zone.dragover {
+            border-color: var(--color-teal-accent);
+            background: #D6EDE5;
+        }
+
+        .upload-zone input[type="file"] {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            opacity: 0;
+            cursor: pointer;
+        }
+
+    .upload-zone-icon {
+        font-size: 2.8rem;
+        color: var(--color-teal-accent);
+        margin-bottom: 10px;
+        display: block;
+    }
+
+    .upload-zone-label {
+        font-size: 0.95rem;
+        font-weight: 700;
+        color: var(--color-text-title);
+        margin-bottom: 4px;
+    }
+
+    .upload-zone-hint {
+        font-size: 12px;
+        color: var(--color-text-sub);
+    }
+
+    .upload-zone-filename {
+        margin-top: 10px;
+        font-size: 13.5px;
+        font-weight: 600;
+        color: var(--color-teal-accent);
+    }
+
+    /* Select */
+    .form-select-academic {
+        width: 100%;
+        max-width: 380px;
+        padding: 10px 14px;
+        font-family: inherit;
+        font-size: 14px;
+        font-weight: 600;
+        color: var(--color-text-title);
+        background-color: #FAFCFA;
+        border: 1.5px solid var(--color-card-border);
+        border-radius: 10px;
+        outline: none;
+        appearance: none;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' fill='%230A7E71' viewBox='0 0 16 16'%3E%3Cpath d='M7.247 11.14L2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z'/%3E%3C/svg%3E");
+        background-repeat: no-repeat;
+        background-position: right 14px center;
+        cursor: pointer;
+        transition: border-color 0.2s ease, box-shadow 0.2s ease;
+        margin-bottom: 28px;
+        box-sizing: border-box;
+    }
+
+        .form-select-academic:focus {
+            border-color: var(--color-teal-accent);
+            box-shadow: 0 0 0 3px rgba(10, 126, 113, 0.12);
+            background-color: #ffffff;
+        }
+
+    /* Nút submit */
+    .btn-amber-cta {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        width: 100%;
+        background-color: var(--color-amber);
+        color: #173831;
+        border: none;
+        border-radius: 12px;
+        padding: 13px 24px;
+        font-size: 15px;
+        font-weight: 700;
+        font-family: inherit;
+        cursor: pointer;
+        box-shadow: 0 3px 12px rgba(245, 166, 35, 0.25);
+        transition: all 0.2s ease;
+    }
+
+        .btn-amber-cta:hover {
+            background-color: var(--color-amber-hover);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(245, 166, 35, 0.35);
+        }
+
+    /* Error box */
+    .error-banner {
+        background: #fff5f5;
+        border: 1.5px solid #fca5a5;
+        border-radius: 10px;
+        padding: 12px 16px;
+        font-size: 13.5px;
+        color: #b91c1c;
+        margin-bottom: 16px;
+    }
+
+    /* ══════════════════
+           LOADING SCREEN
+        ══════════════════ */
+    .loading-screen {
+        text-align: center;
+        padding: 48px 20px;
+    }
+
+    .loading-spinner {
+        width: 48px;
+        height: 48px;
+        margin: 0 auto 20px;
+        border: 3.5px solid rgba(10, 126, 113, 0.2);
+        border-top-color: var(--color-teal-accent);
+        border-radius: 50%;
+        animation: spinAnim 0.8s linear infinite;
+    }
+
+    @@keyframes spinAnim {
+        to {
+            transform: rotate(360deg);
+        }
+    }
+
+    .loading-title {
+        font-size: 1.15rem;
+        font-weight: 700;
+        color: var(--color-teal-dark);
+        margin-bottom: 6px;
+    }
+
+    .loading-sub {
+        font-size: 13px;
+        color: var(--color-text-sub);
+    }
+
+    /* ══════════════════
+           RESULT SCREEN
+        ══════════════════ */
+    .section-divider {
+        border: none;
+        border-top: 1.5px solid var(--color-card-border);
+        margin: 0 0 24px;
+    }
+
+    .result-label-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 14px;
+        flex-wrap: wrap;
+        gap: 10px;
+    }
+
+    .result-section-label {
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 0.6px;
+        text-transform: uppercase;
+        color: var(--color-teal-accent);
+    }
+
+    /* Nút copy nhỏ gọn */
+    .btn-copy-outline {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        font-size: 12px;
+        font-weight: 600;
+        font-family: inherit;
+        color: var(--color-teal-accent);
+        background: transparent;
+        border: 1.5px solid var(--color-teal-accent);
+        border-radius: 100px;
+        padding: 5px 14px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+
+        .btn-copy-outline:hover {
+            background: var(--color-teal-accent);
+            color: #ffffff;
+        }
+
+    /* Hộp kết quả tóm tắt */
+    .result-box {
+        background: #FAFCFA;
+        border-left: 4px solid var(--color-teal-accent);
+        border-radius: 16px;
+        padding: 24px;
+        font-size: 14.5px;
+        line-height: 1.8;
+        color: var(--color-text-title);
+        white-space: pre-wrap;
+        word-break: break-word;
+        margin-bottom: 24px;
+        min-height: 120px;
+        border: 1.5px solid var(--color-mint-border);
+        border-left: 4px solid var(--color-teal-accent);
+    }
+
+    /* Row nút hành động */
+    .result-action-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        align-items: center;
+        padding-top: 22px;
+        border-top: 1.5px solid var(--color-card-border);
+    }
+
+    .btn-outline-neutral {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        font-family: inherit;
+        font-size: 13.5px;
+        font-weight: 600;
+        color: var(--color-text-sub);
+        background: transparent;
+        border: 1.5px solid var(--color-card-border);
+        border-radius: 100px;
+        padding: 9px 22px;
+        cursor: pointer;
+        text-decoration: none;
+        transition: all 0.2s ease;
+    }
+
+        .btn-outline-neutral:hover {
+            border-color: var(--color-teal-accent);
+            color: var(--color-teal-accent);
+            background: var(--color-mint-light);
+        }
+
+    .btn-teal-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        font-family: inherit;
+        font-size: 13.5px;
+        font-weight: 700;
+        color: #ffffff;
+        background-color: var(--color-teal-accent);
+        border: none;
+        border-radius: 100px;
+        padding: 9px 24px;
+        cursor: pointer;
+        text-decoration: none;
+        box-shadow: 0 3px 10px rgba(10, 126, 113, 0.22);
+        transition: all 0.2s ease;
+    }
+
+        .btn-teal-pill:hover {
+            background-color: #08665B;
+            transform: translateY(-1px);
+            box-shadow: 0 5px 14px rgba(10, 126, 113, 0.3);
+            color: #ffffff;
+        }
+
+    @@media (max-width: 600px) {
+        .academic-card-header {
+            padding: 22px 20px;
+        }
+
+        .academic-card-body {
+            padding: 22px 18px;
+        }
+
+        .card-header-title {
+            font-size: 1.35rem;
+        }
+
+        .result-action-row {
+            flex-direction: column;
+            align-items: stretch;
+        }
+
+            .result-action-row > * {
+                justify-content: center;
+            }
+    }
+</style>
+
+<div class="standalone-summary-page">
+
+    <!-- Link quay lại -->
+    <a href="/Document" class="link-back-library">
+        <i class="bi bi-arrow-left"></i> Trở về Thư viện mở
+    </a>
+
+    <!-- Khung card chính -->
+    <div class="academic-card">
+
+        <!-- Header gradient -->
+        <div class="academic-card-header">
+            <div class="badge-ai-tag">
+                <i class="bi bi-file-text-fill"></i> AI Summarizer
+            </div>
+            <h1 class="card-header-title font-serif-academic">Tóm tắt tài liệu bất kỳ</h1>
+            <p class="card-header-subtitle">Tải lên file PDF và để AI cô đọng nội dung nghiên cứu nhanh chóng.</p>
+        </div>
+
+        <!-- Card body -->
+        <div class="academic-card-body">
+
+            <!-- ══════════ SETUP SCREEN ══════════ -->
+            <div id="setupScreen">
+
+                <div id="setupError" class="error-banner u-hidden"></div>
+
+                <form id="standaloneSummaryForm" onsubmit="handleGenerateStandaloneSummary(event)">
+
+                    <!-- Upload Dropzone -->
+                    <div style="margin-bottom: 20px;">
+                        <label class="field-label">1. Tải lên tài liệu PDF:</label>
+                        <div class="upload-zone" id="uploadZone">
+                            <input type="file"
+                                   id="pdfFileInput"
+                                   name="file"
+                                   accept=".pdf"
+                                   onchange="handleFileSelect(this)"
+                                   required />
+                            <i class="bi bi-cloud-arrow-up upload-zone-icon"></i>
+                            <div class="upload-zone-label">Nhấn để chọn hoặc kéo thả file PDF vào đây</div>
+                            <div class="upload-zone-hint">Hỗ trợ tài liệu học tập, bài báo nghiên cứu (.pdf)</div>
+                            <div class="upload-zone-filename u-hidden" id="fileNameDisplay"></div>
+                        </div>
+                    </div>
+
+                    <!-- Chọn định dạng tóm tắt -->
+                    <div style="margin-bottom: 28px;">
+                        <label class="field-label" for="selectSummaryStyle">2. Chọn định dạng tóm tắt:</label>
+                        <select id="selectSummaryStyle" class="form-select-academic">
+                            <option value="bullets">Gạch đầu dòng ý chính (Bullet points)</option>
+                            <option value="keypoints">Ý cốt lõi & Từ khóa quan trọng</option>
+                            <option value="paragraph">Đoạn văn xuôi mạch lạc (Paragraph)</option>
+                            <option value="academic">Phong cách học thuật</option>
+                        </select>
+                    </div>
+
+                    <!-- Nút gửi -->
+                    <button type="submit" class="btn-amber-cta">
+                        <i class="bi bi-cpu-fill"></i>
+                        <span>Tiến hành tóm tắt ngay</span>
+                    </button>
+                </form>
+            </div>
+
+            <!-- ══════════ LOADING SCREEN ══════════ -->
+            <div id="loadingScreen" class="loading-screen u-hidden">
+                <div class="loading-spinner"></div>
+                <div class="loading-title font-serif-academic">AI đang đọc và cô đọng tài liệu...</div>
+                <p class="loading-sub">Quá trình này mất vài giây. Hệ thống sẽ tự động dọn dẹp file tạm sau khi hoàn tất.</p>
+            </div>
+
+            <!-- ══════════ RESULT SCREEN ══════════ -->
+            <div id="resultScreen" class="u-hidden">
+
+                <hr class="section-divider" />
+
+                <div class="result-label-row">
+                    <div class="result-section-label">📌 Kết quả tóm tắt:</div>
+                    <button type="button" class="btn-copy-outline" onclick="copySummaryText()">
+                        <i class="bi bi-clipboard" id="copyIcon"></i>
+                        <span id="copyBtnText">Sao chép kết quả</span>
+                    </button>
+                </div>
+
+                <!-- Hộp nội dung tóm tắt -->
+                <div class="result-box" id="summaryResultBox"></div>
+
+                <!-- Hành động tiếp theo -->
+                <div class="result-action-row">
+                    <button type="button" class="btn-outline-neutral" onclick="resetToSetup()">
+                        <i class="bi bi-arrow-counterclockwise"></i>
+                        Tóm tắt file khác
+                    </button>
+                    <a href="/Document" class="btn-teal-pill">
+                        <i class="bi bi-journals"></i>
+                        Về Thư viện
+                    </a>
+                </div>
+
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<script>
+    // ── Drag & Drop ──
+    const uploadZone = document.getElementById('uploadZone');
+
+    uploadZone.addEventListener('dragover', e => {
+        e.preventDefault();
+        uploadZone.classList.add('dragover');
+    });
+    uploadZone.addEventListener('dragleave', () => {
+        uploadZone.classList.remove('dragover');
+    });
+    uploadZone.addEventListener('drop', e => {
+        e.preventDefault();
+        uploadZone.classList.remove('dragover');
+        const file = e.dataTransfer.files[0];
+        if (file) {
+            const input = document.getElementById('pdfFileInput');
+            const dt = new DataTransfer();
+            dt.items.add(file);
+            input.files = dt.files;
+            showFileName(file.name);
+        }
+    });
+
+    function handleFileSelect(input) {
+        if (input.files && input.files[0]) {
+            showFileName(input.files[0].name);
+        }
+    }
+
+    function showFileName(name) {
+        const el = document.getElementById('fileNameDisplay');
+        el.textContent = '📄 Đã chọn: ' + name;
+        el.classList.remove('u-hidden');
+    }
+
+    // ── Chuyển màn hình ──
+    function showScreen(name) {
+        document.getElementById('setupScreen').classList.add('u-hidden');
+        document.getElementById('loadingScreen').classList.add('u-hidden');
+        document.getElementById('resultScreen').classList.add('u-hidden');
+        document.getElementById(name + 'Screen').classList.remove('u-hidden');
+    }
+
+    // ── Submit: Tóm tắt ──
+    async function handleGenerateStandaloneSummary(event) {
+        event.preventDefault();
+        const fileInput = document.getElementById('pdfFileInput');
+        const summaryStyle = document.getElementById('selectSummaryStyle').value;
+        const errorEl = document.getElementById('setupError');
+
+        errorEl.classList.add('u-hidden');
+
+        if (!fileInput.files || fileInput.files.length === 0) {
+            errorEl.textContent = '⚠️ Vui lòng chọn file PDF trước khi tiến hành tóm tắt.';
+            errorEl.classList.remove('u-hidden');
+            return;
+        }
+
+        const formData = new FormData();
+        formData.append('file', fileInput.files[0]);
+        formData.append('summaryStyle', summaryStyle);
+
+        showScreen('loading');
+
+        try {
+            const response = await fetch('/api/Document/generate-standalone-summary', {
+                method: 'POST',
+                body: formData
+            });
+
+            if (!response.ok) {
+                const errText = await response.text();
+                throw new Error(errText || 'Không thể tạo bản tóm tắt.');
+            }
+
+            const data = await response.json();
+            document.getElementById('summaryResultBox').innerText = data.summary || '(Không có nội dung tóm tắt)';
+            document.getElementById('copyBtnText').textContent = 'Sao chép kết quả';
+            document.getElementById('copyIcon').className = 'bi bi-clipboard';
+
+            showScreen('result');
+
+        } catch (err) {
+            showScreen('setup');
+            errorEl.textContent = '⚠️ Lỗi: ' + (err.message || 'Đã xảy ra lỗi không xác định.');
+            errorEl.classList.remove('u-hidden');
+        }
+    }
+
+    // ── Sao chép kết quả ──
+    async function copySummaryText() {
+        const text = document.getElementById('summaryResultBox').innerText;
+        const btnText = document.getElementById('copyBtnText');
+        const icon = document.getElementById('copyIcon');
+
+        try {
+            await navigator.clipboard.writeText(text);
+            btnText.textContent = 'Đã sao chép!';
+            icon.className = 'bi bi-clipboard-check-fill';
+            setTimeout(() => {
+                btnText.textContent = 'Sao chép kết quả';
+                icon.className = 'bi bi-clipboard';
+            }, 2500);
+        } catch (err) {
+            btnText.textContent = 'Không thể sao chép';
+        }
+    }
+
+    // ── Reset về màn hình Setup ──
+    function resetToSetup() {
+        const fileInput = document.getElementById('pdfFileInput');
+        fileInput.value = '';
+        document.getElementById('fileNameDisplay').classList.add('u-hidden');
+        document.getElementById('fileNameDisplay').textContent = '';
+        document.getElementById('summaryResultBox').innerText = '';
+        document.getElementById('setupError').classList.add('u-hidden');
+        showScreen('setup');
+    }
+</script>

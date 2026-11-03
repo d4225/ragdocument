@@ -284,4 +284,50 @@ NỘI DUNG TÀI LIỆU:
         var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
         return JsonSerializer.Deserialize<List<QuizQuestionDto>>(cleanJson, options) ?? new List<QuizQuestionDto>();
     }
+    /// <summary>
+    /// Kiểm tra nội dung văn bản có an toàn hay không (Chặn đồi trụy, bạo lực, nội dung không phù hợp)
+    /// </summary>
+    public async Task<(bool IsSafe, string Reason)> EvaluateContentSafetyAsync(string sampleText)
+    {
+        // Sử dụng $$""" giúp giữ nguyên cặp ngoặc { } của JSON, và dùng {{sampleText}} để chèn biến C#
+        var prompt = $$"""
+    Bạn là một chuyên gia kiểm duyệt nội dung và an toàn hệ thống học thuật. Hãy phân tích đoạn văn bản mẫu trích từ tài liệu được tải lên dưới đây.
+    Nhiệm vụ của bạn là đánh giá xem văn bản này có chứa nội dung đồi trụy, khiêu dâm, bạo lực cực đoan, kích động thù địch hoặc trái pháp luật hay không.
+
+    Trả về duy nhất một JSON object hợp lệ, không có Markdown.
+
+    Quy tắc:
+    - isSafe là true nếu nội dung an toàn, false nếu không an toàn.
+    - reason phải là chuỗi rỗng "" nếu isSafe = true.
+    - Nếu isSafe = false, reason phải nêu lý do cụ thể dựa trên nội dung tài liệu.
+    - Không được trả lại nội dung hướng dẫn hoặc văn bản mẫu trong reason.
+    - Không sử dụng ký tự NULL (\u0000) trong kết quả.
+
+    Ví dụ cấu trúc:
+    {
+      "isSafe": false,
+      "reason": "Nêu lý do cụ thể tại đây"
+    }
+
+    VĂN BẢN CẦN KIỂM TRA:
+    {{sampleText}}
+    """;
+
+        try
+        {
+            var rawResponse = await GenerateAnswerAsync(prompt);
+            var cleanJson = rawResponse.Replace("```json", "").Replace("```", "").Trim();
+
+            using var doc = JsonDocument.Parse(cleanJson);
+            bool isSafe = doc.RootElement.GetProperty("isSafe").GetBoolean();
+            string reason = doc.RootElement.GetProperty("reason").GetString() ?? "Vi phạm tiêu chuẩn nội dung.";
+
+            return (isSafe, reason);
+        }
+        catch
+        {
+            // Nếu lỗi parse JSON, mặc định cho qua vòng kiểm duyệt cơ bản
+            return (true, string.Empty);
+        }
+    }
 }

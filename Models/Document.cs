@@ -14,7 +14,7 @@ public class Document
     [Required]
     [MaxLength(255)]
     public string FileName { get; set; } = string.Empty;
-
+    public string? RejectReason { get; set; }
     public string FilePath { get; set; } = string.Empty;
 
     public DateTime UploadedAt { get; set; } = DateTime.UtcNow;

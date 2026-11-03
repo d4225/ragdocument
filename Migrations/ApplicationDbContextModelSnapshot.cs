@@ -116,6 +116,9 @@ namespace SmartDocumentRAG.API.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<string>("RejectReason")
+                        .HasColumnType("text");
+
                     b.Property<string>("Status")
                         .IsRequired()
                         .HasColumnType("text");

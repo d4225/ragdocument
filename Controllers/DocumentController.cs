@@ -820,5 +820,53 @@ namespace SmartDocumentRAG.API.Controllers
 
             return Ok(new { message = "Đã dọn dẹp sạch dữ liệu phiên." });
         }
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Delete(Guid id, string returnUrl = "List")
+        {
+            var document = await _db.Documents
+                .Include(d => d.ParentChunks)
+                .FirstOrDefaultAsync(d => d.Id == id);
+
+            if (document == null)
+            {
+                TempData["Error"] = "Không tìm thấy tài liệu cần xóa.";
+                return RedirectToAction(returnUrl == "Index" ? "Index" : "List");
+            }
+
+            try
+            {
+                // 1. Xóa file vật lý trên ổ đĩa server nếu có (bọc try-catch phòng file đang bị Hangfire giữ)
+                if (!string.IsNullOrEmpty(document.FilePath) && System.IO.File.Exists(document.FilePath))
+                {
+                    try
+                    {
+                        System.IO.File.Delete(document.FilePath);
+                    }
+                    catch
+                    {
+                        // Bỏ qua nếu file đang bị tiến trình ngầm đọc dở dang
+                    }
+                }
+
+                // 2. Xóa dữ liệu khỏi Database (Cascade Delete sẽ tự động dọn sạch chunks)
+                _db.Documents.Remove(document);
+                await _db.SaveChangesAsync();
+
+                TempData["Success"] = $"Đã xóa thành công tài liệu: {document.FileName}";
+            }
+            catch (Exception ex)
+            {
+                TempData["Error"] = $"Lỗi khi xóa tài liệu: {ex.Message}";
+            }
+
+            // Trở về đúng trang nguồn mà người dùng đã bấm xóa (Mặc định là "List")
+            if (returnUrl == "Index")
+            {
+                return RedirectToAction(nameof(Index));
+            }
+
+            return RedirectToAction(nameof(List));
+        }
     }
 }

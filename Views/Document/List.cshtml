@@ -5,7 +5,8 @@
     ViewData["Title"] = "Tài liệu của tôi";
     var totalDocs = Model?.Count ?? 0;
     var completedDocs = Model?.Count(d => d.Status == "Completed") ?? 0;
-    var processingDocs = totalDocs - completedDocs;
+    var rejectedDocs = Model?.Count(d => d.Status == "Rejected") ?? 0;
+    var processingDocs = totalDocs - completedDocs - rejectedDocs;
     var currentUsername = Context.Session.GetString("Username") ?? "Người dùng";
 }
 
@@ -32,7 +33,7 @@
         gap: 16px;
         padding-bottom: 18px;
         margin-bottom: 24px;
-        border-bottom: 1.5px solid var(--color-card-border);
+        border-bottom: 1.5px solid var(--color-border);
     }
 
     .page-title {
@@ -82,15 +83,21 @@
             box-shadow: 0 6px 16px rgba(245, 166, 35, 0.35);
         }
 
-    /* 3. LƯỚI 3 THẺ THỐNG KÊ (CSS GRID) */
+    /* 3. LƯỚI THỐNG KÊ (CSS GRID 4 CỘT) */
     .stats-grid {
         display: grid;
-        grid-template-columns: repeat(3, 1fr);
-        gap: 18px;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 16px;
         margin-bottom: 24px;
     }
 
-    @@media (max-width: 820px) {
+    @@media (max-width: 992px) {
+        .stats-grid {
+            grid-template-columns: repeat(2, 1fr);
+        }
+    }
+
+    @@media (max-width: 576px) {
         .stats-grid {
             grid-template-columns: 1fr;
             gap: 12px;
@@ -99,17 +106,17 @@
 
     .academic-card {
         background: #ffffff;
-        border: 1.5px solid var(--color-card-border);
+        border: 1.5px solid var(--color-border);
         border-radius: 16px;
         box-shadow: 0 3px 14px rgba(20, 53, 47, 0.04);
         transition: transform 0.2s ease, box-shadow 0.2s ease;
     }
 
     .stat-card {
-        padding: 18px 22px;
+        padding: 16px 20px;
         display: flex;
         align-items: center;
-        gap: 16px;
+        gap: 14px;
     }
 
         .stat-card:hover {
@@ -118,8 +125,8 @@
         }
 
     .stat-icon-wrapper {
-        width: 50px;
-        height: 50px;
+        width: 46px;
+        height: 46px;
         border-radius: 12px;
         display: flex;
         align-items: center;
@@ -129,7 +136,7 @@
     }
 
     .stat-title {
-        font-size: 11.5px;
+        font-size: 11px;
         font-weight: 700;
         color: var(--color-text-sub);
         text-transform: uppercase;
@@ -138,7 +145,7 @@
     }
 
     .stat-number {
-        font-size: 1.75rem;
+        font-size: 1.6rem;
         font-weight: 700;
         line-height: 1.1;
     }
@@ -180,7 +187,7 @@
 
     .search-input-field {
         width: 100%;
-        border: 1.5px solid var(--color-card-border);
+        border: 1.5px solid var(--color-border);
         border-radius: 10px;
         padding: 8px 12px 8px 36px;
         font-size: 13.5px;
@@ -217,14 +224,14 @@
             text-transform: uppercase;
             letter-spacing: 0.5px;
             padding: 12px 14px;
-            border-bottom: 2px solid var(--color-card-border);
+            border-bottom: 2px solid var(--color-border);
             background-color: #FAFDFB;
         }
 
         .academic-table td {
             padding: 14px;
             vertical-align: middle;
-            border-bottom: 1px solid var(--color-card-border);
+            border-bottom: 1px solid var(--color-border);
             font-size: 13.5px;
         }
 
@@ -258,16 +265,16 @@
         display: inline-flex;
         align-items: center;
         gap: 5px;
-        font-size: 11px;
+        font-size: 11.5px;
         font-weight: 700;
-        padding: 4px 10px;
+        padding: 5px 12px;
         border-radius: 100px;
     }
 
     .status-completed {
         background-color: var(--color-mint-light);
         color: var(--color-teal-accent);
-        border: 1px solid var(--color-mint-border);
+        border: 1px solid var(--color-mint-glow);
     }
 
     .status-processing {
@@ -276,14 +283,40 @@
         border: 1px solid #FDE68A;
     }
 
-    /* Nút bấm thao tác */
+    .status-rejected {
+        background-color: #FEF2F2;
+        color: #EF4444;
+        border: 1px solid #FCA5A5;
+    }
+
+    .rejected-reason-box {
+        font-size: 11.5px;
+        color: #991B1B;
+        background-color: #FFF5F5;
+        border: 1px dashed #FCA5A5;
+        border-radius: 6px;
+        padding: 4px 8px;
+        margin-top: 4px;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+    }
+
+    /* GROUP NÚT BẤM THAO TÁC */
+    .action-buttons-group {
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        gap: 8px;
+    }
+
     .btn-chat-action {
         display: inline-flex;
         align-items: center;
         gap: 5px;
         color: var(--color-teal-accent);
         background: #ffffff;
-        border: 1.5px solid var(--color-card-border);
+        border: 1.5px solid var(--color-border);
         border-radius: 8px;
         padding: 6px 14px;
         font-size: 12.5px;
@@ -295,7 +328,7 @@
 
         .btn-chat-action:hover {
             background-color: var(--color-mint-light);
-            border-color: var(--color-mint-border);
+            border-color: var(--color-teal-accent);
             color: var(--color-teal-dark);
             transform: translateY(-1px);
         }
@@ -313,6 +346,43 @@
         cursor: not-allowed;
         white-space: nowrap;
     }
+
+    .btn-rejected-disabled {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        background-color: #FEF2F2;
+        color: #EF4444;
+        border: 1px solid #FCA5A5;
+        border-radius: 8px;
+        padding: 6px 12px;
+        font-size: 12px;
+        cursor: not-allowed;
+        white-space: nowrap;
+    }
+
+    /* NÚT XÓA TÀI LIỆU */
+    .btn-delete-action {
+        background-color: #FEF2F2;
+        color: #EF4444;
+        border: 1.5px solid #FCA5A5;
+        border-radius: 8px;
+        padding: 6px 10px;
+        font-size: 13px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+        .btn-delete-action:hover {
+            background-color: #EF4444;
+            color: #ffffff;
+            border-color: #EF4444;
+            transform: translateY(-1px);
+            box-shadow: 0 3px 8px rgba(239, 68, 68, 0.25);
+        }
 
     .spinner-dot {
         display: inline-block;
@@ -339,7 +409,7 @@
 
     .empty-icon {
         font-size: 3rem;
-        color: var(--color-mint-border);
+        color: var(--color-teal-accent);
         margin-bottom: 10px;
     }
 
@@ -370,7 +440,7 @@
         </div>
     </header>
 
-    <!-- 2. THẺ THỐNG KÊ (3 CỘT CSS GRID) -->
+    <!-- 2. THẺ THỐNG KÊ (4 CỘT CSS GRID) -->
     <section class="stats-grid">
         <!-- Tổng số tài liệu -->
         <div class="academic-card stat-card">
@@ -378,7 +448,7 @@
                 <i class="bi bi-files"></i>
             </div>
             <div>
-                <div class="stat-title">Tổng số tài liệu</div>
+                <div class="stat-title">Tổng số tệp</div>
                 <div class="stat-number" style="color: var(--color-teal-dark);">@totalDocs</div>
             </div>
         </div>
@@ -400,8 +470,19 @@
                 <i class="bi bi-hourglass-split"></i>
             </div>
             <div>
-                <div class="stat-title">Đang xử lý ngầm</div>
+                <div class="stat-title">Đang xử lý</div>
                 <div class="stat-number" style="color: #D97706;">@processingDocs</div>
+            </div>
+        </div>
+
+        <!-- Bị từ chối -->
+        <div class="academic-card stat-card">
+            <div class="stat-icon-wrapper" style="background-color: #FEF2F2; color: #EF4444;">
+                <i class="bi bi-shield-x"></i>
+            </div>
+            <div>
+                <div class="stat-title">Bị từ chối</div>
+                <div class="stat-number" style="color: #EF4444;">@rejectedDocs</div>
             </div>
         </div>
     </section>
@@ -431,7 +512,7 @@
                     <tr>
                         <th style="padding-left: 18px;">Tên file PDF</th>
                         <th>Ngày tải lên</th>
-                        <th>Trạng thái</th>
+                        <th>Trạng thái & Kiểm duyệt</th>
                         <th style="text-align: right; padding-right: 18px;">Thao tác</th>
                     </tr>
                 </thead>
@@ -455,9 +536,7 @@
                         @foreach (var doc in Model)
                         {
                             var isCompleted = doc.Status == "Completed";
-                            var badgeClass = isCompleted ? "status-completed" : "status-processing";
-                            var statusText = isCompleted ? "Sẵn sàng" : "Đang xử lý...";
-                            var statusIcon = isCompleted ? "bi-check-circle-fill" : "bi-hourglass-split";
+                            var isRejected = doc.Status == "Rejected";
 
                             <tr>
                                 <!-- Cột Tên file -->
@@ -474,27 +553,73 @@
                                     <span style="font-size: 11px; color: var(--color-text-sub);">@doc.UploadedAt.ToString("HH:mm")</span>
                                 </td>
 
-                                <!-- Cột Trạng thái -->
+                                <!-- Cột Trạng thái & Lý do kiểm duyệt -->
                                 <td>
-                                    <span class="badge-status @badgeClass">
-                                        <i class="bi @statusIcon"></i> @statusText
-                                    </span>
+                                    @if (isCompleted)
+                                    {
+                                        <span class="badge-status status-completed">
+                                            <i class="bi bi-check-circle-fill"></i> Sẵn sàng
+                                        </span>
+                                    }
+                                    else if (isRejected)
+                                    {
+                                        <span class="badge-status status-rejected">
+                                            <i class="bi bi-shield-exclamation"></i> Bị từ chối
+                                        </span>
+                                        @if (!string.IsNullOrEmpty(doc.RejectReason))
+                                        {
+                                            <div class="rejected-reason-box" title="Lý do chi tiết từ AI">
+                                                <i class="bi bi-info-circle-fill"></i> @doc.RejectReason
+                                            </div>
+                                        }
+                                        else
+                                        {
+                                            <div class="rejected-reason-box">
+                                                <i class="bi bi-info-circle-fill"></i> Vi phạm tiêu chuẩn nội dung an toàn.
+                                            </div>
+                                        }
+                                    }
+                                    else
+                                    {
+                                        <span class="badge-status status-processing">
+                                            <i class="bi bi-hourglass-split"></i> Đang xử lý...
+                                        </span>
+                                    }
                                 </td>
 
                                 <!-- Cột Hành động -->
                                 <td style="text-align: right; padding-right: 18px;">
-                                    @if (isCompleted)
-                                    {
-                                        <a href="/Document/Details/@doc.Id" class="btn-chat-action">
-                                            <i class="bi bi-chat-quote-fill"></i> Hỏi đáp
-                                        </a>
-                                    }
-                                    else
-                                    {
-                                        <button class="btn-processing-disabled" disabled title="Hệ thống đang bóc tách nội dung và trích xuất vector...">
-                                            <span class="spinner-dot"></span> Đang xử lý
-                                        </button>
-                                    }
+                                    <div class="action-buttons-group">
+                                        @if (isCompleted)
+                                        {
+                                            <a href="/Document/Details/@doc.Id" class="btn-chat-action">
+                                                <i class="bi bi-chat-quote-fill"></i> Hỏi đáp
+                                            </a>
+                                        }
+                                        else if (isRejected)
+                                        {
+                                            <button class="btn-rejected-disabled" disabled title="Tài liệu này vi phạm tiêu chuẩn an toàn nên không thể sử dụng.">
+                                                <i class="bi bi-x-circle-fill"></i> Không khả dụng
+                                            </button>
+                                        }
+                                        else
+                                        {
+                                            <button class="btn-processing-disabled" disabled title="Hệ thống đang bóc tách nội dung và kiểm duyệt an toàn...">
+                                                <span class="spinner-dot"></span> Đang xử lý
+                                            </button>
+                                        }
+
+                                        <!-- NÚT XÓA TÀI LIỆU -->
+                                        <!-- NÚT XÓA TÀI LIỆU TRONG LIST.CSHTML -->
+                                        <form action="/Document/Delete/@doc.Id" method="post"
+                                              onsubmit="return confirm('Bạn có chắc chắn muốn xóa tài liệu này không?');"
+                                              style="display: inline;">
+                                            @Html.AntiForgeryToken()
+                                            <button type="submit" class="btn-delete-action" title="Xóa tài liệu">
+                                                <i class="bi bi-trash3-fill"></i>
+                                            </button>
+                                        </form>
+                                    </div>
                                 </td>
                             </tr>
                         }

@@ -8,4 +8,5 @@ public interface IGeminiService
     Task<string> GenerateAnswerAsync(string prompt);
     IAsyncEnumerable<string> StreamAnswerAsync(string prompt);
     Task<List<QuizQuestionDto>> GenerateQuizAsync(string documentContext, int questionCount);
+    Task<(bool IsSafe, string Reason)> EvaluateContentSafetyAsync(string sampleText);
 }

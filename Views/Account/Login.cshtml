@@ -276,7 +276,9 @@
             <!-- Khu vực báo lỗi ModelState -->
             @if (!ViewData.ModelState.IsValid)
             {
-                <div class="validation-alert" asp-validation-summary="All"></div>
+                <div class="validation-alert">
+                    <i class="bi bi-exclamation-triangle-fill"></i> Thông tin tài khoản hoặc mật khẩu không chính xác.
+                </div>
             }
 
             <!-- Tên đăng nhập -->

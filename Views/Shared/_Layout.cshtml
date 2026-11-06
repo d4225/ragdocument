@@ -2,13 +2,14 @@
 @{
     var currentUsername = Context.Session.GetString("Username") ?? "Người dùng";
     var currentPath = Context.Request.Path.Value?.ToLower() ?? "";
+    var isCreatesActive = currentPath.Contains("standalonequiz") || currentPath.Contains("standalonesummary") || currentPath.Contains("ephemeralchat") || currentPath.Contains("/document/quiz") || currentPath.Contains("/document/summary");
 }
 <!DOCTYPE html>
 <html lang="vi">
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>@ViewData["Title"] - Thư Viện Mở</title>
+    <title>@ViewData["Title"] - DBL Document</title>
 
     <!-- Bootstrap Icons (Bộ icon độc lập, không dùng CSS của Bootstrap) -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
@@ -27,19 +28,19 @@
             }
 
             :root {
-                --color-bg-body: #F4F7F5;
+                --color-bg-body: #FFFFFF;
                 --color-sidebar-bg: #12382F;
                 --color-sidebar-gradient: linear-gradient(180deg, #143E34 0%, #0E2922 100%);
-                --color-teal-accent: #0A7E71;
-                --color-teal-dark: #14352F;
-                --color-mint-glow: #9CE7D5;
-                --color-mint-light: #E7F4EE;
-                --color-amber: #F5A623;
-                --color-amber-hover: #E29413;
-                --color-text-title: #142E28;
-                --color-text-body: #324B45;
-                --color-text-sub: #748A84;
-                --color-border: #E1EAE5;
+                --color-teal-accent: #14734D;
+                --color-teal-dark: #173831;
+                --color-mint-glow: #F5B52E;
+                --color-mint-light: #E8F4EB;
+                --color-amber: #F5B52E;
+                --color-amber-hover: #E6A51E;
+                --color-text-title: #173831;
+                --color-text-body: #2C523D;
+                --color-text-sub: #4A6855;
+                --color-border: #DCE9E0;
                 --sidebar-width: 290px;
             }
 
@@ -83,25 +84,25 @@
             .hamburger-toggle-btn {
                 background: #ffffff;
                 border: 1.5px solid var(--color-border);
-                border-radius: 12px;
-                width: 42px;
-                height: 42px;
+                border-radius: 13px;
+                width: 44px;
+                height: 44px;
                 display: flex;
                 align-items: center;
                 justify-content: center;
                 color: var(--color-teal-dark);
-                font-size: 24px;
+                font-size: 21px;
                 cursor: pointer;
                 transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
                 box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
             }
 
                 .hamburger-toggle-btn:hover {
-                    background-color: var(--color-mint-light);
-                    border-color: var(--color-teal-accent);
-                    color: var(--color-teal-accent);
-                    transform: scale(1.05);
-                    box-shadow: 0 4px 12px rgba(10, 126, 113, 0.15);
+                    background-color: var(--color-teal-dark);
+                    border-color: var(--color-teal-dark);
+                    color: var(--color-amber);
+                    transform: translateY(-1px);
+                    box-shadow: 0 6px 16px rgba(10, 54, 40, 0.16);
                 }
 
                 .hamburger-toggle-btn:active {
@@ -145,7 +146,7 @@
                 .topbar-user-pill .online-dot {
                     width: 8px;
                     height: 8px;
-                    background-color: #22C55E;
+                    background-color: #F5B52E;
                     border-radius: 50%;
                 }
 
@@ -244,10 +245,10 @@
             }
 
                 .btn-close-drawer:hover {
-                    background-color: rgba(239, 68, 68, 0.2);
-                    color: #FF8E8E;
-                    border-color: rgba(239, 68, 68, 0.4);
-                    transform: rotate(90deg);
+                    background-color: var(--color-amber);
+                    color: var(--color-teal-dark);
+                    border-color: var(--color-amber);
+                    transform: rotate(90deg) scale(1.03);
                 }
 
             /* --- DANH SÁCH MENU --- */
@@ -340,11 +341,77 @@
                     }
 
                 .drawer-nav-item.item-upload:hover i,
-                .drawer-nav-item.item-quiz:hover i,
-                .drawer-nav-item.item-ephemeral:hover i,
-                .drawer-nav-item.item-summary:hover i {
+                .drawer-nav-item.item-creates:hover i {
                     color: var(--color-amber);
                 }
+
+            .drawer-menu-group {
+                border-radius: 14px;
+            }
+
+            .drawer-menu-summary {
+                list-style: none;
+                cursor: pointer;
+                justify-content: flex-start;
+            }
+
+            .drawer-menu-summary::-webkit-details-marker {
+                display: none;
+            }
+
+            .drawer-menu-summary .menu-chevron {
+                width: auto;
+                margin-left: auto;
+                font-size: 13px;
+                transition: transform 0.2s ease;
+            }
+
+            .drawer-menu-group[open] .menu-chevron {
+                transform: rotate(180deg);
+                color: var(--color-amber);
+            }
+
+            .drawer-menu-group[open] > .drawer-menu-summary {
+                background: rgba(255, 255, 255, 0.08);
+                color: #ffffff;
+            }
+
+            .drawer-submenu {
+                list-style: none;
+                margin: 2px 0 8px 24px;
+                padding: 4px 0 4px 14px;
+                border-left: 1px solid rgba(245, 166, 35, 0.45);
+                display: flex;
+                flex-direction: column;
+                gap: 3px;
+            }
+
+            .drawer-submenu a {
+                display: flex;
+                align-items: center;
+                gap: 10px;
+                padding: 9px 11px;
+                border-radius: 9px;
+                color: rgba(255, 255, 255, 0.76);
+                font-size: 13px;
+                text-decoration: none;
+                transition: color 0.18s ease, background 0.18s ease;
+            }
+
+            .drawer-submenu a i {
+                color: rgba(245, 166, 35, 0.85);
+                font-size: 14px;
+            }
+
+            .drawer-submenu a:hover,
+            .drawer-submenu a.active {
+                background: rgba(255, 255, 255, 0.1);
+                color: #ffffff;
+            }
+
+            .drawer-submenu a.active {
+                box-shadow: inset 2px 0 0 var(--color-amber);
+            }
 
             /* --- PHẦN CUỐI MENU: USER & ĐĂNG XUẤT --- */
             .drawer-footer {
@@ -393,7 +460,7 @@
                     right: 0;
                     width: 9px;
                     height: 9px;
-                    background-color: #22C55E;
+                    background-color: #F5B52E;
                     border: 2px solid #12382F;
                     border-radius: 50%;
                 }
@@ -422,7 +489,7 @@
                 gap: 12px;
                 padding: 10px 16px;
                 border-radius: 12px;
-                color: #FFA5A5;
+                color: rgba(255, 255, 255, 0.76);
                 font-size: 13.5px;
                 font-weight: 600;
                 text-decoration: none;
@@ -435,8 +502,8 @@
                 }
 
                 .btn-drawer-logout:hover {
-                    background-color: rgba(239, 68, 68, 0.15);
-                    color: #FF7E7E;
+                    background-color: rgba(245, 166, 35, 0.14);
+                    color: var(--color-amber);
                     transform: translateX(4px);
                 }
 
@@ -455,107 +522,57 @@
                 flex-grow: 1;
             }
 
-            /* STYLING RIÊNG CHO FOOTER NHÀ PHÁT TRIỂN (KHÔNG DÙNG BOOTSTRAP) */
             .app-footer {
-                background-color: #ffffff;
-                border-top: 1.5px solid var(--color-border);
-                padding: 28px 32px;
-                color: var(--color-text-sub);
-                font-size: 13.5px;
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-                flex-wrap: wrap;
-                gap: 20px;
                 margin-top: auto;
+                padding: 38px max(30px, calc((100% - 1380px) / 2)) 18px;
+                color: #ffffff;
+                background: linear-gradient(115deg, #12382F, #0E4A38 65%, #12614A);
+                border-top: 3px solid var(--color-amber);
             }
 
-            .footer-left-info {
-                display: flex;
-                flex-direction: column;
-                gap: 4px;
+            .footer-inner {
+                display: grid;
+                grid-template-columns: 1.5fr .8fr .9fr 1.2fr;
+                gap: 36px;
+                max-width: 1380px;
+                margin: 0 auto;
+                padding-bottom: 28px;
             }
 
-                .footer-left-info strong {
-                    color: var(--color-teal-dark);
-                    font-family: 'Lora', Georgia, serif;
-                    font-size: 15px;
-                }
-
-            .footer-developers {
-                display: flex;
-                flex-direction: column;
-                gap: 6px;
-            }
-
-            .dev-group-title {
-                font-size: 11px;
-                font-weight: 700;
-                text-transform: uppercase;
-                letter-spacing: 0.8px;
-                color: var(--color-teal-accent);
-                margin-bottom: 2px;
-            }
-
-            .dev-list {
-                display: flex;
-                flex-wrap: wrap;
-                gap: 16px;
-            }
-
-            .dev-item {
+            .footer-brand {
                 display: inline-flex;
                 align-items: center;
-                gap: 6px;
-                color: var(--color-text-body);
+                gap: 10px;
+                color: #ffffff;
+                font-family: 'Lora', Georgia, serif;
+                font-size: 20px;
                 font-weight: 500;
-            }
-
-                .dev-item i {
-                    color: var(--color-teal-accent);
-                    font-size: 14px;
-                }
-
-            .dev-links {
-                display: inline-flex;
-                gap: 8px;
-                margin-left: 2px;
-            }
-
-            .dev-link-btn {
-                background-color: var(--color-mint-light);
-                color: var(--color-teal-dark);
-                padding: 2px 8px;
-                border-radius: 6px;
-                font-size: 11.5px;
-                font-weight: 600;
                 text-decoration: none;
-                border: 1px solid var(--color-border);
-                transition: all 0.2s ease;
-                display: inline-flex;
-                align-items: center;
-                gap: 3px;
             }
 
-                .dev-link-btn:hover {
-                    background-color: var(--color-teal-accent);
-                    color: #ffffff;
-                    border-color: var(--color-teal-accent);
-                    transform: translateY(-1px);
-                }
+            .footer-brand strong { color: var(--color-amber); }
+            .footer-brand-icon { color: var(--color-amber); font-size: 24px; }
+            .footer-brand-column p { max-width: 320px; margin: 14px 0; color: rgba(255,255,255,.78); line-height: 1.7; font-size: 13px; }
+            .footer-product-label { display: inline-flex; align-items: center; gap: 7px; color: var(--color-amber); font-size: 11px; font-weight: 700; letter-spacing: .5px; }
+            .footer-column, .footer-team-column { display: flex; flex-direction: column; align-items: flex-start; gap: 11px; }
+            .footer-column h2, .footer-team-column h2 { margin: 3px 0 5px; color: var(--color-amber); font-size: 12px; font-weight: 700; letter-spacing: .8px; text-transform: uppercase; }
+            .footer-column a { color: rgba(255,255,255,.82); font-size: 13px; text-decoration: none; transition: color .18s ease, transform .18s ease; }
+            .footer-column a:hover { color: var(--color-amber); transform: translateX(3px); }
+            .footer-team-member { display: flex; align-items: center; gap: 9px; color: rgba(255,255,255,.88); font-size: 12px; }
+            .footer-team-avatar { width: 27px; height: 27px; display: grid; place-items: center; border: 1px solid rgba(245,181,46,.6); border-radius: 50%; color: var(--color-amber); font-size: 9px; font-weight: 700; }
+            .footer-team-member a { margin-left: auto; color: #ffffff; font-size: 14px; }
+            .footer-team-member a:hover { color: var(--color-amber); }
+            .footer-bottom { max-width: 1380px; margin: 0 auto; padding-top: 15px; border-top: 1px solid rgba(255,255,255,.2); display: flex; justify-content: space-between; gap: 12px; color: rgba(255,255,255,.68); font-size: 11px; }
 
-            /* Responsive cho thiết bị nhỏ */
-            @@media (max-width: 768px) {
-                .app-footer {
-                    flex-direction: column;
-                    align-items: flex-start;
-                    padding: 20px 16px;
-                }
+            @@media (max-width: 900px) {
+                .footer-inner { grid-template-columns: 1.2fr 1fr; gap: 28px; }
+            }
 
-                .dev-list {
-                    flex-direction: column;
-                    gap: 8px;
-                }
+            @@media (max-width: 560px) {
+                .app-footer { padding: 30px 20px 16px; }
+                .footer-inner { grid-template-columns: 1fr 1fr; gap: 26px 18px; }
+                .footer-brand-column { grid-column: 1 / -1; }
+                .footer-bottom { flex-direction: column; }
             }
     </style>
     @await RenderSectionAsync("Styles", required: false)
@@ -572,8 +589,8 @@
 
             <!-- LOGO TIÊU ĐỀ TRÊN TOPBAR -->
             <a href="/Document" class="topbar-brand">
-                <i class="bi bi-book-half topbar-brand-icon"></i>
-                <span class="topbar-brand-text font-serif-academic">THƯ VIỆN MỞ</span>
+                <i class="bi bi-journals topbar-brand-icon"></i>
+                <span class="topbar-brand-text font-serif-academic">DBL Document</span>
             </a>
         </div>
 
@@ -597,9 +614,9 @@
         <div class="drawer-header">
             <a href="/Document" class="drawer-brand-box">
                 <div class="drawer-brand-icon">
-                    <i class="bi bi-book-half"></i>
+                    <i class="bi bi-journals"></i>
                 </div>
-                <div class="drawer-brand-text font-serif-academic">THƯ VIỆN MỞ</div>
+                <div class="drawer-brand-text font-serif-academic">DBL Document</div>
             </a>
             <button class="btn-close-drawer" id="btnCloseMenu" aria-label="Đóng menu">
                 <i class="bi bi-x-lg"></i>
@@ -608,7 +625,7 @@
 
         <!-- Danh sách mục điều hướng -->
         <nav class="drawer-nav-menu">
-            <div class="nav-group-title">Menu Điều hướng</div>
+            <div class="nav-group-title">Điều hướng</div>
             <ul class="drawer-menu-list">
 
                 <!-- MỤC 1: TRANG CHỦ -->
@@ -627,28 +644,20 @@
                     </a>
                 </li>
 
-                <!-- MỤC: TẠO QUIZ ĐỘC LẬP -->
+                <!-- Nhóm công cụ Creates -->
                 <li>
-                    <a href="/Document/StandaloneQuiz" class="drawer-nav-item item-quiz @(currentPath.Contains("/standalonequiz") ? "active" : "")">
-                        <i class="bi bi-patch-question-fill"></i>
-                        <span>Tạo Quiz Nhanh</span>
-                    </a>
-                </li>
-
-                <!-- MỤC: HỎI ĐÁP NHANH EPHEMERAL -->
-                <li>
-                    <a href="/Document/EphemeralChat" class="drawer-nav-item item-ephemeral @(currentPath.Contains("/ephemeralchat") ? "active" : "")">
-                        <i class="bi bi-lightning-fill"></i>
-                        <span>Hỏi Đáp Nhanh Tạm Thời</span>
-                    </a>
-                </li>
-
-                <!-- MỤC: TÓM TẮT NHANH -->
-                <li>
-                    <a href="/Document/StandaloneSummary" class="drawer-nav-item item-summary @(currentPath.Contains("/standalonesummary") ? "active" : "")">
-                        <i class="bi bi-file-text-fill"></i>
-                        <span>Tóm Tắt Nhanh</span>
-                    </a>
+                    <details class="drawer-menu-group item-creates" open="@(isCreatesActive ? "open" : null)">
+                        <summary class="drawer-nav-item drawer-menu-summary @(isCreatesActive ? "active" : "")">
+                            <i class="bi bi-stars"></i>
+                            <span>Creates</span>
+                            <i class="bi bi-chevron-down menu-chevron"></i>
+                        </summary>
+                        <ul class="drawer-submenu">
+                            <li><a href="/Document/StandaloneQuiz" class="@(currentPath.Contains("standalonequiz") || currentPath.Contains("/document/quiz") ? "active" : "")"><i class="bi bi-patch-question-fill"></i><span>Tạo Quiz</span></a></li>
+                            <li><a href="/Document/StandaloneSummary" class="@(currentPath.Contains("standalonesummary") || currentPath.Contains("/document/summary") ? "active" : "")"><i class="bi bi-file-text-fill"></i><span>Tóm tắt tài liệu</span></a></li>
+                            <li><a href="/Document/EphemeralChat" class="@(currentPath.Contains("ephemeralchat") ? "active" : "")"><i class="bi bi-chat-left-text-fill"></i><span>Hỏi đáp</span></a></li>
+                        </ul>
+                    </details>
                 </li>
 
                 <!-- MỤC 3: TÀI LIỆU CỦA TÔI -->
@@ -695,42 +704,53 @@
 
         <!-- FOOTER THÔNG TIN NHÀ PHÁT TRIỂN -->
         <footer class="app-footer">
-            <div class="footer-left-info">
-                <strong>Thư Viện Mở</strong>
-                <span>Không gian học thuật & chia sẻ tri thức trực tuyến. © @DateTime.Now.Year</span>
+            <div class="footer-inner">
+                <section class="footer-brand-column">
+                    <a href="/Document" class="footer-brand">
+                        <span class="footer-brand-icon"><i class="bi bi-journals"></i></span>
+                        <span>DBL <strong>Document</strong></span>
+                    </a>
+                    <p>Nền tảng học tập thông minh, giúp bạn khai thác tri thức từ tài liệu dễ dàng hơn.</p>
+                    <span class="footer-product-label"><i class="bi bi-stars"></i> Document intelligence</span>
+                </section>
+
+                <nav class="footer-column" aria-label="Điều hướng chân trang">
+                    <h2>Không gian</h2>
+                    <a href="/Document">Trang chủ</a>
+                    <a href="/Document/List">Tài liệu của tôi</a>
+                    <a href="/Document/UploadPage">Tải tài liệu lên</a>
+                </nav>
+
+                <nav class="footer-column" aria-label="Công cụ chân trang">
+                    <h2>Công cụ</h2>
+                    <a href="/Document/StandaloneQuiz">Tạo Quiz</a>
+                    <a href="/Document/StandaloneSummary">Tóm tắt tài liệu</a>
+                    <a href="/Document/EphemeralChat">Hỏi đáp</a>
+                </nav>
+
+                <section class="footer-team-column">
+                    <h2>Đội ngũ phát triển</h2>
+                    <div class="footer-team-member">
+                        <span class="footer-team-avatar">TD</span>
+                        <span>Triệu Tuấn Duy</span>
+                        <a href="https://web.facebook.com/duyga123" target="_blank" rel="noopener noreferrer" aria-label="Facebook Triệu Tuấn Duy"><i class="bi bi-facebook"></i></a>
+                    </div>
+                    <div class="footer-team-member">
+                        <span class="footer-team-avatar">VL</span>
+                        <span>Ngô Vương Linh</span>
+                        <a href="https://web.facebook.com/vuong.linh.303497" target="_blank" rel="noopener noreferrer" aria-label="Facebook Ngô Vương Linh"><i class="bi bi-facebook"></i></a>
+                    </div>
+                    <div class="footer-team-member">
+                        <span class="footer-team-avatar">LB</span>
+                        <span>Lê Như Bảo</span>
+                        <a href="https://web.facebook.com/le.nhu.bao.656010" target="_blank" rel="noopener noreferrer" aria-label="Facebook Lê Như Bảo"><i class="bi bi-facebook"></i></a>
+                    </div>
+                </section>
             </div>
 
-            <div class="footer-developers">
-                <div class="dev-group-title">Đội ngũ phát triển dự án</div>
-                <div class="dev-list">
-                    <!-- Nhà phát triển 1 -->
-                    <div class="dev-item">
-                        <i class="bi bi-code-slash"></i>
-                        <span>Triệu Tuấn Duy</span>
-                        <div class="dev-links">
-                            <a href="https://web.facebook.com/duyga123" target="_blank" class="dev-link-btn" title="Facebook cá nhân"><i class="bi bi-facebook"></i> FB</a>
-                            <a href="tel:0971358660" class="dev-link-btn" title="Số điện thoại liên hệ"><i class="bi bi-telephone-fill"></i> SĐT</a>
-                        </div>
-                    </div>
-
-                    <!-- Nhà phát triển 2 -->
-                    <div class="dev-item">
-                        <i class="bi bi-code-slash"></i>
-                        <span>Ngô Vương Linh</span>
-                        <div class="dev-links">
-                            <a href="https://web.facebook.com/vuong.linh.303497" target="_blank" class="dev-link-btn" title="Facebook cá nhân"><i class="bi bi-facebook"></i> FB</a>
-                        </div>
-                    </div>
-
-                    <!-- Nhà phát triển 3 -->
-                    <div class="dev-item">
-                        <i class="bi bi-code-slash"></i>
-                        <span>Lê Như Bảo</span>
-                        <div class="dev-links">
-                            <a href="https://web.facebook.com/le.nhu.bao.656010" target="_blank" class="dev-link-btn" title="Facebook cá nhân"><i class="bi bi-facebook"></i> FB</a>
-                        </div>
-                    </div>
-                </div>
+            <div class="footer-bottom">
+                <span>© @DateTime.Now.Year DBL Document. All rights reserved.</span>
+                <span>Học tập · Khám phá · Phát triển</span>
             </div>
         </footer>
     </div>

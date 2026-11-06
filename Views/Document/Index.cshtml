@@ -1,590 +1,894 @@
-﻿@model List<SmartDocumentRAG.API.Models.Document>
+@model List<SmartDocumentRAG.API.Models.Document>
 
 @{
     Layout = "~/Views/Shared/_Layout.cshtml";
-    ViewData["Title"] = "Trang chủ Thư Viện Mở";
+    ViewData["Title"] = "Trang chủ DBL Document";
     var searchString = ViewData["SearchString"] as string ?? "";
+    var currentUsername = Context.Session.GetString("Username") ?? "bạn";
     var totalDocs = Model?.Count ?? 0;
 }
 
 <style>
-    /* 1. KHUNG CHỨA TOÀN TRANG CHỦ */
-    .home-page-container {
-        padding: 24px 32px 64px 32px;
-        max-width: 1560px;
+    .home-page {
+        --color-teal-accent: #14734D;
+        --color-teal-dark: #173831;
+        --color-mint-light: #E8F4EB;
+        --color-border: #DCE9E0;
+        --color-text-title: #173831;
+        --color-text-body: #2C523D;
+        --color-text-sub: #4A6855;
+        --color-amber: #F5B52E;
+        --color-amber-hover: #E6A51E;
+        width: min(1480px, 100%);
         margin: 0 auto;
+        padding: 24px 30px 40px;
     }
 
-    @@media (max-width: 768px) {
-        .home-page-container {
-            padding: 16px 16px 48px 16px;
-        }
-    }
-
-    /* 2. HERO BANNER BẰNG CSS GRID 2 CỘT */
-    .hero-section {
-        background: linear-gradient(135deg, #13463a 0%, #0d2e26 100%);
-        border-radius: 24px;
-        color: #ffffff;
-        padding: 44px 40px;
-        display: grid;
-        grid-template-columns: 1fr 340px;
-        gap: 36px;
+    .home-intro {
+        min-height: 172px;
+        display: flex;
         align-items: center;
-        box-shadow: 0 12px 32px rgba(13, 46, 38, 0.2);
+        justify-content: space-between;
+        gap: 24px;
+        overflow: hidden;
+        margin-bottom: 20px;
+        padding: 28px 34px;
+        border: 1px solid rgba(245, 166, 35, 0.45);
+        border-radius: 22px;
+        background: linear-gradient(112deg, #12382F 0%, #0E4A38 72%, #12614A 100%);
+        box-shadow: 0 12px 28px rgba(18, 56, 47, 0.14);
         position: relative;
     }
 
-    @@media (max-width: 960px) {
-        .hero-section {
-            grid-template-columns: 1fr;
-            padding: 32px 24px;
-        }
-        .hero-img-col {
-            display: none; /* Ẩn ảnh trên màn hình nhỏ để ưu tiên tìm kiếm */
-        }
+    .home-intro::after {
+        content: "";
+        position: absolute;
+        width: 270px;
+        height: 270px;
+        right: 115px;
+        top: -170px;
+        border: 1px solid rgba(245, 166, 35, 0.2);
+        border-radius: 50%;
+        pointer-events: none;
     }
 
-    .hero-badge {
-        background-color: rgba(231, 244, 238, 0.15);
-        color: #92E4CD;
-        border: 1px solid rgba(146, 228, 205, 0.3);
+    .home-intro-copy {
+        position: relative;
+        z-index: 1;
+    }
+
+    .home-hero-note {
+        position: relative;
+        z-index: 1;
+        min-width: 215px;
+        display: flex;
+        align-items: center;
+        gap: 13px;
+        padding: 15px 18px;
+        border: 1px solid rgba(255, 255, 255, 0.18);
+        border-radius: 15px;
+        background: rgba(255, 255, 255, 0.09);
+        color: #ffffff;
+    }
+
+    .home-hero-note-icon {
+        width: 42px;
+        height: 42px;
+        display: grid;
+        place-items: center;
+        flex: 0 0 auto;
+        border-radius: 12px;
+        background: var(--color-amber);
+        color: var(--color-teal-dark);
+        font-size: 20px;
+    }
+
+    .home-hero-note strong {
+        display: block;
+        color: #ffffff;
+        font-size: 12px;
+        margin-bottom: 3px;
+    }
+
+    .home-hero-note span {
+        color: rgba(255, 255, 255, 0.76);
         font-size: 11px;
-        font-weight: 700;
-        padding: 5px 14px;
-        border-radius: 100px;
-        letter-spacing: 0.8px;
+    }
+
+    .home-eyebrow {
         display: inline-flex;
         align-items: center;
-        gap: 6px;
-        margin-bottom: 14px;
-    }
-
-    .hero-title {
-        font-size: 2.25rem;
+        gap: 8px;
+        color: var(--color-amber);
+        font-size: 11px;
         font-weight: 700;
-        line-height: 1.3;
-        color: #ffffff;
-        margin-bottom: 12px;
+        letter-spacing: 1.15px;
+        text-transform: uppercase;
+        margin-bottom: 10px;
     }
 
-    .hero-title span {
-        color: #F8CB7C;
-        font-style: italic;
-    }
-
-    .hero-subtitle {
+    .home-eyebrow i {
         font-size: 15px;
-        line-height: 1.6;
-        color: rgba(255, 255, 255, 0.8);
-        max-width: 520px;
-        margin-bottom: 24px;
     }
 
-    /* 3. THANH TÌM KIẾM & LIVE SEARCH DROPDOWN */
+    .home-title {
+        color: #ffffff;
+        font-size: clamp(1.8rem, 3vw, 2.4rem);
+        font-weight: 700;
+        line-height: 1.2;
+        margin: 0;
+    }
+
+    .home-description {
+        color: rgba(255, 255, 255, 0.82);
+        font-size: 14px;
+        line-height: 1.7;
+        margin: 10px 0 0;
+    }
+
+    .quick-actions {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 14px;
+        margin-bottom: 22px;
+    }
+
+    .quick-action-card {
+        min-height: 140px;
+        background: #ffffff;
+        border: 1.5px solid var(--color-border);
+        border-radius: 18px;
+        box-shadow: 0 4px 14px rgba(18, 64, 53, 0.045);
+        padding: 18px 20px 16px;
+        text-decoration: none;
+        color: inherit;
+        display: flex;
+        flex-direction: column;
+        transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+    }
+
+    .quick-action-card:hover {
+        transform: translateY(-3px);
+        border-color: var(--color-amber);
+        box-shadow: 0 12px 26px rgba(18, 64, 53, 0.09);
+    }
+
+    .quick-action-top {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 14px;
+        margin-bottom: 16px;
+    }
+
+    .quick-action-icon {
+        width: 48px;
+        height: 48px;
+        border-radius: 14px;
+        display: grid;
+        place-items: center;
+        font-size: 22px;
+        flex: 0 0 auto;
+    }
+
+    .quick-action-icon.quiz {
+        color: var(--color-teal-dark);
+        background: var(--color-amber);
+    }
+
+    .quick-action-icon.summary {
+        color: var(--color-teal-accent);
+        background: var(--color-mint-light);
+    }
+
+    .quick-action-icon.chat {
+        color: var(--color-teal-accent);
+        background: var(--color-mint-light);
+    }
+
+    .quick-action-arrow {
+        color: var(--color-teal-accent);
+        font-size: 18px;
+        transition: transform 0.2s ease, color 0.2s ease;
+    }
+
+    .quick-action-card:hover .quick-action-arrow {
+        color: var(--color-teal-accent);
+        transform: translateX(3px);
+    }
+
+    .quick-action-title {
+        color: var(--color-teal-dark);
+        font-size: 16px;
+        font-weight: 700;
+        margin: 0 0 6px;
+    }
+
+    .quick-action-description {
+        color: var(--color-text-sub);
+        font-size: 12.5px;
+        line-height: 1.55;
+        margin: 0;
+    }
+
+    .search-section {
+        margin-bottom: 30px;
+    }
+
+    .search-section-title {
+        color: var(--color-teal-dark);
+        font-size: 15px;
+        font-weight: 700;
+        margin: 0 0 12px;
+    }
+
     .search-wrapper {
         position: relative;
         width: 100%;
-        max-width: 560px;
     }
 
-    .search-box-wrapper {
-        width: 100%;
-        background: #ffffff;
-        border-radius: 14px;
-        padding: 6px 8px 6px 16px;
+    .search-box {
+        min-height: 62px;
         display: flex;
         align-items: center;
-        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.22);
-        transition: transform 0.2s ease, box-shadow 0.2s ease;
+        gap: 12px;
+        padding: 7px 8px 7px 20px;
+        background: #ffffff;
+        border: 1.5px solid var(--color-border);
+        border-radius: 15px;
+        box-shadow: 0 5px 18px rgba(18, 64, 53, 0.055);
+        transition: border-color 0.2s ease, box-shadow 0.2s ease;
     }
 
-    .search-box-wrapper:focus-within {
-        transform: translateY(-1px);
-        box-shadow: 0 10px 28px rgba(0, 0, 0, 0.3), 0 0 0 3px rgba(245, 166, 35, 0.35);
+    .search-box:focus-within {
+        border-color: var(--color-teal-accent);
+        box-shadow: 0 0 0 4px rgba(10, 126, 113, 0.1), 0 6px 20px rgba(18, 64, 53, 0.07);
     }
 
-    .search-input-field {
-        border: none;
-        outline: none;
-        font-family: inherit;
-        font-size: 14.5px;
-        color: var(--color-text-title);
+    .search-icon {
+        color: var(--color-teal-accent);
+        font-size: 19px;
+        flex: 0 0 auto;
+    }
+
+    .search-input {
+        min-width: 0;
+        flex: 1;
+        border: 0;
+        outline: 0;
         background: transparent;
-        flex-grow: 1;
-        padding: 8px 6px;
-    }
-
-    .search-input-field::placeholder {
-        color: #9DB0AA;
-    }
-
-    .btn-search-amber {
-        background-color: var(--color-amber);
-        color: #173831;
-        border: none;
-        border-radius: 10px;
-        padding: 10px 24px;
-        font-weight: 700;
+        color: var(--color-text-title);
+        font: inherit;
         font-size: 14px;
-        font-family: inherit;
+        padding: 10px 0;
+    }
+
+    .search-input::placeholder {
+        color: #9AABA5;
+    }
+
+    .search-submit {
+        min-height: 46px;
+        border: 0;
+        border-radius: 11px;
+        padding: 0 22px;
+        background: var(--color-amber);
+        color: #173831;
+        font: inherit;
+        font-size: 13px;
+        font-weight: 700;
         cursor: pointer;
         white-space: nowrap;
-        transition: all 0.2s ease;
+        transition: background 0.2s ease, transform 0.2s ease;
     }
 
-    .btn-search-amber:hover {
-        background-color: var(--color-amber-hover);
+    .search-submit:hover {
+        background: var(--color-amber-hover);
         transform: translateY(-1px);
     }
 
-    /* Hộp gợi ý xổ xuống (Live Search) */
     .suggestions-dropdown {
         position: absolute;
         top: calc(100% + 8px);
         left: 0;
         right: 0;
-        background: #ffffff;
-        border-radius: 14px;
-        box-shadow: 0 12px 32px rgba(13, 46, 38, 0.25);
         z-index: 1050;
-        overflow: hidden;
         display: none;
-        border: 1.5px solid var(--color-card-border);
+        overflow: hidden;
+        background: #ffffff;
+        border: 1px solid var(--color-border);
+        border-radius: 14px;
+        box-shadow: 0 14px 30px rgba(13, 46, 38, 0.16);
     }
 
     .suggestion-item {
-        padding: 12px 18px;
-        color: var(--color-text-title);
-        text-decoration: none;
         display: flex;
         align-items: center;
         gap: 10px;
-        font-size: 14px;
+        padding: 13px 18px;
+        color: var(--color-text-title);
+        font-size: 13.5px;
+        text-decoration: none;
         border-bottom: 1px solid #F0F4F2;
-        transition: background 0.15s ease, color 0.15s ease;
-    }
-
-    .suggestion-item:hover {
-        background-color: var(--color-mint-light);
-        color: var(--color-teal-accent);
     }
 
     .suggestion-item:last-child {
-        border-bottom: none;
+        border-bottom: 0;
     }
 
-    /* Ảnh minh họa bên phải Hero */
-    .hero-img-col {
-        text-align: center;
-    }
-
-    .hero-img {
-        width: 100%;
-        max-width: 320px;
-        height: 250px;
-        object-fit: cover;
-        border-radius: 20px;
-        box-shadow: 0 14px 30px rgba(0, 0, 0, 0.35);
-        border: 2px solid rgba(255, 255, 255, 0.15);
-    }
-
-    /* 4. THANH TIÊU ĐỀ SECTION */
-    .section-header-bar {
-        display: flex;
-        justify-content: space-between;
-        align-items: flex-end;
-        flex-wrap: wrap;
-        gap: 12px;
-        margin: 44px 0 24px 0;
-    }
-
-    .section-subtitle-tag {
-        font-size: 11.5px;
-        font-weight: 700;
+    .suggestion-item:hover {
+        background: var(--color-mint-light);
         color: var(--color-teal-accent);
+    }
+
+    .documents-section {
+        margin-top: 0;
+    }
+
+    .section-header {
+        display: flex;
+        align-items: flex-end;
+        justify-content: space-between;
+        gap: 16px;
+        margin-bottom: 20px;
+    }
+
+    .section-heading-wrap {
+        min-width: 0;
+    }
+
+    .section-kicker {
+        color: var(--color-teal-accent);
+        font-size: 10.5px;
+        font-weight: 700;
+        letter-spacing: 1.1px;
         text-transform: uppercase;
-        letter-spacing: 1.2px;
-        margin-bottom: 4px;
+        margin-bottom: 5px;
     }
 
     .section-title {
-        font-size: 1.65rem;
-        font-weight: 700;
         color: var(--color-teal-dark);
+        font-size: 1.55rem;
+        font-weight: 700;
         margin: 0;
     }
 
-    .badge-count-pill {
-        background: #ffffff;
-        border: 1.5px solid var(--color-card-border);
-        padding: 6px 16px;
-        border-radius: 100px;
-        font-size: 13px;
-        color: var(--color-text-body);
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+    .section-description {
+        color: var(--color-text-sub);
+        font-size: 12.5px;
+        margin: 6px 0 0;
     }
 
-    .badge-count-pill strong {
+    .document-count {
+        flex: 0 0 auto;
+        padding: 7px 13px;
+        border: 1px solid var(--color-border);
+        border-radius: 100px;
+        background: #ffffff;
+        color: var(--color-text-body);
+        font-size: 12px;
+    }
+
+    .document-count strong {
         color: var(--color-teal-accent);
     }
 
-    /* 5. LƯỚI TÀI LIỆU 4 CỘT HÀNG NGANG (CSS GRID) */
     .documents-grid {
         display: grid;
-        grid-template-columns: repeat(4, minmax(0, 1fr)); /* ÉP BUỘC 4 CỘT */
-        gap: 20px;
-        width: 100%;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 18px;
     }
 
-    @@media (max-width: 1200px) {
+    .document-card {
+        min-width: 0;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+        background: #ffffff;
+        border: 1.5px solid var(--color-border);
+        border-radius: 16px;
+        box-shadow: 0 4px 14px rgba(18, 64, 53, 0.04);
+        transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+    }
+
+    .document-card:hover {
+        transform: translateY(-3px);
+        border-color: var(--color-amber);
+        box-shadow: 0 12px 24px rgba(18, 64, 53, 0.09);
+    }
+
+    .document-preview {
+        position: relative;
+        height: 166px;
+        overflow: hidden;
+        background: linear-gradient(145deg, #E8F4EB, #FFFFFF 55%, #FFF4D4);
+        border-bottom: 1px solid var(--color-border);
+    }
+
+    .document-preview-frame {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        border: 0;
+        pointer-events: none;
+        background: transparent;
+    }
+
+    .document-preview-link {
+        position: absolute;
+        inset: 0;
+        z-index: 2;
+        display: block;
+    }
+
+    .document-preview-label {
+        position: absolute;
+        z-index: 3;
+        left: 12px;
+        bottom: 12px;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 5px 9px;
+        border: 1px solid rgba(255, 255, 255, 0.75);
+        border-radius: 7px;
+        background: rgba(255, 255, 255, 0.92);
+        color: var(--color-teal-dark);
+        font-size: 10px;
+        font-weight: 700;
+        pointer-events: none;
+    }
+
+    .document-preview-label i {
+        color: var(--color-teal-accent);
+    }
+
+    .document-card-body {
+        display: flex;
+        flex: 1;
+        flex-direction: column;
+        padding: 15px 16px 16px;
+    }
+
+    .document-card-topline {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        margin-bottom: 9px;
+    }
+
+    .document-type {
+        color: var(--color-text-sub);
+        font-size: 10px;
+        font-weight: 700;
+        letter-spacing: 0.7px;
+        text-transform: uppercase;
+    }
+
+    .document-status {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        padding: 4px 8px;
+        border-radius: 100px;
+        font-size: 10px;
+        font-weight: 700;
+        white-space: nowrap;
+    }
+
+    .document-status.ready {
+        background: var(--color-mint-light);
+        color: var(--color-teal-accent);
+    }
+
+    .document-status.processing {
+        background: #FFF4D4;
+        color: var(--color-teal-dark);
+        border: 1px solid var(--color-amber);
+    }
+
+    .document-status.rejected,
+    .document-status.failed {
+        background: #FFF4D4;
+        color: var(--color-teal-dark);
+    }
+
+    .document-title-link {
+        color: var(--color-teal-dark);
+        text-decoration: none;
+    }
+
+    .document-title-link:hover {
+        color: var(--color-teal-accent);
+    }
+
+    .document-title {
+        min-height: 44px;
+        display: -webkit-box;
+        overflow: hidden;
+        margin: 0 0 13px;
+        font-size: 14px;
+        font-weight: 700;
+        line-height: 1.55;
+        word-break: break-word;
+        -webkit-box-orient: vertical;
+        -webkit-line-clamp: 2;
+    }
+
+    .document-meta {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        margin-top: auto;
+        padding-top: 11px;
+        border-top: 1px solid #EDF2EF;
+        color: var(--color-text-sub);
+        font-size: 11px;
+    }
+
+    .document-uploader {
+        min-width: 0;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        overflow: hidden;
+    }
+
+    .document-uploader i {
+        color: var(--color-teal-accent);
+        flex: 0 0 auto;
+    }
+
+    .document-uploader strong {
+        overflow: hidden;
+        color: var(--color-text-body);
+        font-weight: 600;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .document-date {
+        flex: 0 0 auto;
+        white-space: nowrap;
+    }
+
+    .empty-state {
+        padding: 48px 20px;
+        border: 1.5px dashed #C9DAD1;
+        border-radius: 16px;
+        background: rgba(255, 255, 255, 0.72);
+        text-align: center;
+    }
+
+    .empty-state-icon {
+        display: grid;
+        place-items: center;
+        width: 54px;
+        height: 54px;
+        margin: 0 auto 12px;
+        border-radius: 16px;
+        background: var(--color-mint-light);
+        color: var(--color-teal-accent);
+        font-size: 23px;
+    }
+
+    .empty-state h3 {
+        color: var(--color-teal-dark);
+        font-family: 'Lora', Georgia, serif;
+        font-size: 1.2rem;
+        margin: 0 0 6px;
+    }
+
+    .empty-state p {
+        color: var(--color-text-sub);
+        font-size: 13px;
+        margin: 0 0 16px;
+    }
+
+    .empty-state-link {
+        display: inline-flex;
+        align-items: center;
+        gap: 7px;
+        padding: 9px 14px;
+        border-radius: 9px;
+        background: var(--color-amber);
+        color: #173831;
+        font-size: 12px;
+        font-weight: 700;
+        text-decoration: none;
+    }
+
+    .empty-state-link:hover {
+        background: var(--color-amber-hover);
+        color: #173831;
+    }
+
+    @@media (max-width: 1100px) {
         .documents-grid {
             grid-template-columns: repeat(3, minmax(0, 1fr));
         }
     }
 
-    @@media (max-width: 820px) {
+    @@media (max-width: 900px) {
+        .home-page {
+            padding: 28px 22px 52px;
+        }
+
+        .quick-actions {
+            gap: 12px;
+        }
+
+        .quick-action-card {
+            padding: 18px;
+        }
+
+        .home-hero-note {
+            min-width: 195px;
+        }
+
         .documents-grid {
             grid-template-columns: repeat(2, minmax(0, 1fr));
         }
     }
 
-    @@media (max-width: 520px) {
+    @@media (max-width: 600px) {
+        .home-page {
+            padding: 22px 14px 40px;
+        }
+
+        .quick-actions {
+            grid-template-columns: 1fr;
+            gap: 10px;
+            margin-bottom: 26px;
+        }
+
+        .home-intro {
+            min-height: 0;
+            padding: 24px 20px;
+        }
+
+        .home-hero-note {
+            display: none;
+        }
+
+        .quick-action-card {
+            min-height: 0;
+            padding: 16px;
+        }
+
+        .quick-action-top {
+            margin-bottom: 12px;
+        }
+
+        .search-box {
+            gap: 8px;
+            padding-left: 13px;
+        }
+
+        .search-submit {
+            min-height: 42px;
+            padding: 0 13px;
+            font-size: 12px;
+        }
+
+        .search-submit span {
+            display: none;
+        }
+
+        .search-submit i {
+            font-size: 17px;
+        }
+
+        .section-header {
+            align-items: flex-start;
+        }
+
+        .section-title {
+            font-size: 1.3rem;
+        }
+
+        .document-count {
+            padding: 6px 9px;
+            font-size: 10.5px;
+        }
+
         .documents-grid {
             grid-template-columns: 1fr;
+            gap: 14px;
         }
-    }
 
-    /* 6. THẺ TÀI LIỆU (DOC CARD) */
-    .doc-card {
-        background: #ffffff;
-        border: 1.5px solid var(--color-card-border);
-        border-radius: 16px;
-        padding: 18px;
-        box-shadow: 0 4px 14px rgba(18, 64, 53, 0.04);
-        display: flex;
-        flex-direction: column;
-        justify-content: space-between;
-        transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
-        height: 100%;
-    }
-
-    .doc-card:hover {
-        transform: translateY(-4px);
-        box-shadow: 0 10px 24px rgba(18, 64, 53, 0.09);
-        border-color: #B2D8C7;
-    }
-
-    .doc-card-top {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 12px;
-    }
-
-    .badge-cat {
-        background-color: var(--color-mint-light);
-        color: var(--color-teal-accent);
-        border: 1px solid var(--color-mint-border);
-        font-size: 10.5px;
-        font-weight: 700;
-        padding: 3px 8px;
-        border-radius: 6px;
-        text-transform: uppercase;
-        letter-spacing: 0.4px;
-    }
-
-    .doc-icon-box {
-        width: 32px;
-        height: 32px;
-        background: #F0F6F3;
-        color: var(--color-teal-accent);
-        border-radius: 8px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 15px;
-    }
-
-    .doc-title {
-        font-size: 1rem;
-        font-weight: 600;
-        line-height: 1.45;
-        color: var(--color-text-title);
-        margin: 0 0 12px 0;
-        display: -webkit-box;
-        -webkit-line-clamp: 2;
-        -webkit-box-orient: vertical;
-        overflow: hidden;
-        min-height: 44px;
-        transition: color 0.15s ease;
-    }
-
-    .doc-card:hover .doc-title {
-        color: var(--color-teal-accent);
-    }
-
-    .doc-meta {
-        background-color: #F8FAF9;
-        border-radius: 10px;
-        padding: 8px 12px;
-        font-size: 12px;
-        margin-bottom: 16px;
-    }
-
-    .doc-meta-item {
-        display: flex;
-        justify-content: space-between;
-        color: var(--color-text-muted);
-        margin-bottom: 4px;
-    }
-
-    .doc-meta-item:last-child {
-        margin-bottom: 0;
-    }
-
-    .doc-meta-item strong {
-        color: var(--color-text-body);
-    }
-
-    .btn-view-doc {
-        background-color: var(--color-mint-light);
-        color: var(--color-teal-accent);
-        font-size: 13.5px;
-        font-weight: 600;
-        height: 38px;
-        border-radius: 10px;
-        text-decoration: none;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 6px;
-        transition: all 0.2s ease;
-        border: none;
-        width: 100%;
-    }
-
-    .btn-view-doc:hover {
-        background-color: var(--color-teal-accent);
-        color: #ffffff;
-    }
-
-    .btn-view-doc i {
-        transition: transform 0.2s ease;
-    }
-
-    .btn-view-doc:hover i {
-        transform: translateX(3px);
-    }
-
-    .btn-processing-box {
-        background: #F3F4F6;
-        color: #9CA3AF;
-        border: 1px solid #E5E7EB;
-        border-radius: 10px;
-        padding: 9px;
-        text-align: center;
-        font-size: 12.5px;
-        width: 100%;
-    }
-
-    /* 7. TRẠNG THÁI RỖNG */
-    .empty-result-box {
-        background: #ffffff;
-        border: 1.5px solid var(--color-card-border);
-        border-radius: 20px;
-        padding: 56px 24px;
-        text-align: center;
-        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04);
-    }
-
-    .empty-result-box i {
-        font-size: 3rem;
-        color: #C8E5D8;
-        margin-bottom: 12px;
-        display: inline-block;
-    }
-
-    .empty-reset-link {
-        display: inline-flex;
-        align-items: center;
-        gap: 6px;
-        color: var(--color-teal-accent);
-        border: 1.5px solid var(--color-card-border);
-        border-radius: 100px;
-        padding: 8px 20px;
-        font-size: 13.5px;
-        font-weight: 600;
-        text-decoration: none;
-        margin-top: 14px;
-        transition: all 0.2s ease;
-    }
-
-    .empty-reset-link:hover {
-        background-color: var(--color-mint-light);
-        color: var(--color-teal-dark);
-        border-color: var(--color-mint-border);
+        .document-preview {
+            height: 190px;
+        }
     }
 </style>
 
-<div class="home-page-container">
-
-    <!-- 1. HERO SECTION KÈM LIVE SEARCH -->
-    <section class="hero-section">
-        <div>
-            <span class="hero-badge">
-                <i class="bi bi-patch-check-fill"></i> THƯ VIỆN MỞ TRI THỨC
-            </span>
-            <h1 class="hero-title font-serif-academic">
-                Tìm đúng tài liệu.<br />
-                <span>Mở thêm góc nhìn mới.</span>
-            </h1>
-            <p class="hero-subtitle">
-                Khám phá kho tàng tài liệu chất lượng cao từ cộng đồng và bắt đầu hành trình học hỏi của riêng bạn.
-            </p>
-
-            <!-- FORM TÌM KIẾM TÍCH HỢP LIVE SEARCH -->
-            <form asp-action="Index" method="get" autocomplete="off">
-                <div class="search-wrapper">
-                    <div class="search-box-wrapper">
-                        <i class="bi bi-search text-muted me-2"></i>
-                        <input type="text" 
-                               id="searchInput" 
-                               name="searchString" 
-                               value="@searchString"
-                               class="search-input-field"
-                               placeholder="Tìm theo tên file, người chia sẻ..." />
-                        <button class="btn-search-amber" type="submit">Tìm kiếm</button>
-                    </div>
-
-                    <!-- KHUNG DROPDOWN GỢI Ý TỪ API -->
-                    <div id="suggestionsBox" class="suggestions-dropdown"></div>
-                </div>
-            </form>
+<div class="home-page">
+    <header class="home-intro">
+        <div class="home-intro-copy">
+            <div class="home-eyebrow"><i class="bi bi-stars"></i> DBL Document · Học tập thông minh</div>
+            <h1 class="home-title font-serif-academic">Bạn muốn làm gì, @currentUsername?</h1>
+            <p class="home-description">Đọc, tìm kiếm và khai thác kiến thức từ tài liệu trong cùng một không gian.</p>
         </div>
-
-        <!-- CỘT ẢNH MINH HỌA -->
-        <div class="hero-img-col">
-            <img src="https://images.unsplash.com/photo-1507842217343-583bb7270b66?q=80&w=800&auto=format&fit=crop"
-                 alt="Thư viện"
-                 class="hero-img" />
+        <div class="home-hero-note" aria-hidden="true">
+            <div class="home-hero-note-icon"><i class="bi bi-journals"></i></div>
+            <div><strong>Tri thức trong tầm tay</strong><span>Một nơi cho mọi tài liệu</span></div>
         </div>
+    </header>
+
+    <section class="quick-actions" aria-label="Chức năng nhanh">
+        <a href="/Document/StandaloneQuiz" class="quick-action-card">
+            <div class="quick-action-top">
+                <div class="quick-action-icon quiz"><i class="bi bi-patch-question-fill"></i></div>
+                <i class="bi bi-arrow-up-right quick-action-arrow"></i>
+            </div>
+            <h2 class="quick-action-title">Tạo Quiz</h2>
+            <p class="quick-action-description">Tạo câu hỏi trắc nghiệm để ôn tập kiến thức từ tài liệu.</p>
+        </a>
+
+        <a href="/Document/StandaloneSummary" class="quick-action-card">
+            <div class="quick-action-top">
+                <div class="quick-action-icon summary"><i class="bi bi-file-earmark-text-fill"></i></div>
+                <i class="bi bi-arrow-up-right quick-action-arrow"></i>
+            </div>
+            <h2 class="quick-action-title">Tóm tắt tài liệu</h2>
+            <p class="quick-action-description">Nắm ý chính của một tài liệu dài trong vài phút.</p>
+        </a>
+
+        <a href="/Document/EphemeralChat" class="quick-action-card">
+            <div class="quick-action-top">
+                <div class="quick-action-icon chat"><i class="bi bi-chat-left-text-fill"></i></div>
+                <i class="bi bi-arrow-up-right quick-action-arrow"></i>
+            </div>
+            <h2 class="quick-action-title">Hỏi đáp</h2>
+            <p class="quick-action-description">Đặt câu hỏi và tìm câu trả lời dựa trên nội dung PDF.</p>
+        </a>
     </section>
 
-    <!-- 2. TIÊU ĐỀ DANH SÁCH & SỐ LƯỢNG -->
-    <div class="section-header-bar">
-        <div>
-            <div class="section-subtitle-tag">Khám phá</div>
-            <h2 class="section-title font-serif-academic">
+    <section class="search-section" aria-label="Tìm tài liệu">
+        <h2 class="search-section-title">Tìm tài liệu trong thư viện</h2>
+        <form asp-controller="Document" asp-action="Index" method="get" autocomplete="off">
+            <div class="search-wrapper">
+                <div class="search-box">
+                    <i class="bi bi-search search-icon" aria-hidden="true"></i>
+                    <input type="text"
+                           id="searchInput"
+                           name="searchString"
+                           value="@searchString"
+                           class="search-input"
+                           placeholder="Tìm theo tên tài liệu hoặc người tải lên..."
+                           aria-label="Tìm theo tên tài liệu hoặc người tải lên" />
+                    <button class="search-submit" type="submit">
+                        <i class="bi bi-search" aria-hidden="true"></i>
+                        <span>Tìm kiếm</span>
+                    </button>
+                </div>
+                <div id="suggestionsBox" class="suggestions-dropdown" role="listbox" aria-label="Gợi ý tài liệu"></div>
+            </div>
+        </form>
+    </section>
+
+    <section class="documents-section" aria-label="Tài liệu gần đây">
+        <div class="section-header">
+            <div class="section-heading-wrap">
+                <div class="section-kicker">DBL Document</div>
+                <h2 class="section-title font-serif-academic">
+                    @if (!string.IsNullOrEmpty(searchString))
+                    {
+                        <span>Kết quả tìm kiếm</span>
+                    }
+                    else
+                    {
+                        <span>Tài liệu bạn có thể thích</span>
+                    }
+                </h2>
+                <p class="section-description">
+                    @if (!string.IsNullOrEmpty(searchString))
+                    {
+                        <span>Kết quả phù hợp với “@searchString”.</span>
+                    }
+                    else
+                    {
+                        <span>4 tài liệu mới được chia sẻ gần đây.</span>
+                    }
+                </p>
+            </div>
+            <div class="document-count">Hiển thị <strong>@totalDocs</strong> tài liệu</div>
+        </div>
+
+        @if (Model == null || !Model.Any())
+        {
+            <div class="empty-state">
+                <div class="empty-state-icon"><i class="bi bi-folder2-open"></i></div>
                 @if (!string.IsNullOrEmpty(searchString))
                 {
-                    <span>Kết quả tìm kiếm cho: "@searchString"</span>
+                    <h3>Chưa tìm thấy tài liệu phù hợp</h3>
+                    <p>Thử từ khóa khác hoặc xem lại toàn bộ thư viện.</p>
+                    <a href="/Document" class="empty-state-link"><i class="bi bi-arrow-counterclockwise"></i> Xem tài liệu mới nhất</a>
                 }
                 else
                 {
-                    <span>Tài liệu nổi bật</span>
+                    <h3>Chưa có tài liệu trong DBL Document</h3>
+                    <p>Tải lên một file PDF để bắt đầu sử dụng các công cụ học tập.</p>
+                    <a href="/Document/UploadPage" class="empty-state-link"><i class="bi bi-cloud-arrow-up-fill"></i> Tải tài liệu lên</a>
                 }
-            </h2>
-        </div>
-        <div class="badge-count-pill">
-            Tổng số: <strong>@totalDocs</strong> tài liệu
-        </div>
-    </div>
-
-    <!-- 3. KHU VỰC HIỂN THỊ 4 CỘT HÀNG NGANG -->
-    <section class="mb-5">
-        @if (Model == null || !Model.Any())
-        {
-            <div class="empty-result-box">
-                <i class="bi bi-search"></i>
-                <h3 class="font-serif-academic" style="font-size: 1.25rem; color: var(--color-teal-dark); margin-bottom: 6px;">
-                    Không tìm thấy tài liệu phù hợp
-                </h3>
-                <p style="font-size: 14px; color: var(--color-text-muted); margin: 0;">
-                    Không có tài liệu nào khớp với từ khóa tìm kiếm của bạn.
-                </p>
-                <a href="/Document" class="empty-reset-link">
-                    <i class="bi bi-arrow-counterclockwise"></i> Quay lại tất cả tài liệu
-                </a>
             </div>
         }
         else
         {
-            string[] categories = { "Học thuật", "Công nghệ", "Nghiên cứu", "Kinh tế", "Sáng tạo" };
-            int index = 0;
-
-            <!-- LƯỚI 4 CỘT CSS GRID -->
             <div class="documents-grid">
                 @foreach (var doc in Model)
                 {
-                    var isCompleted = doc.Status == "Completed";
                     var uploaderName = doc.User?.Username ?? "Cộng đồng";
-                    var catTag = categories[index % categories.Length];
-                    var fileExtension = System.IO.Path.GetExtension(doc.FileName)?.TrimStart('.').ToUpper();
-                    if (string.IsNullOrEmpty(fileExtension)) { fileExtension = "DOC"; }
-                    index++;
+                    var statusClass = doc.Status switch
+                    {
+                        "Completed" => "ready",
+                        "Rejected" => "rejected",
+                        "Failed" => "failed",
+                        _ => "processing"
+                    };
+                    var statusLabel = doc.Status switch
+                    {
+                        "Completed" => "Sẵn sàng",
+                        "Rejected" => "Bị từ chối",
+                        "Failed" => "Lỗi xử lý",
+                        _ => "Đang xử lý"
+                    };
 
-                    <div class="doc-card">
-                        <div>
-                            <!-- Header của thẻ -->
-                            <div class="doc-card-top">
-                                <span class="badge-cat">@catTag</span>
-                                <div class="doc-icon-box">
-                                    @if (fileExtension == "PDF")
+                    <article class="document-card">
+                        <div class="document-preview">
+                            <iframe class="document-preview-frame"
+                                    src="/api/Document/view/@doc.Id#page=1&toolbar=0&navpanes=0&scrollbar=0&zoom=page-width"
+                                    title="Trang đầu của @doc.FileName"
+                                    loading="lazy"
+                                    tabindex="-1"
+                                    aria-hidden="true"></iframe>
+                            <a href="/Document/Details/@doc.Id"
+                               class="document-preview-link"
+                               aria-label="Mở tài liệu @doc.FileName"></a>
+                            <div class="document-preview-label"><i class="bi bi-file-earmark-pdf-fill"></i> Trang đầu PDF</div>
+                        </div>
+
+                        <div class="document-card-body">
+                            <div class="document-card-topline">
+                                <span class="document-type">Tài liệu PDF</span>
+                                <span class="document-status @statusClass">
+                                    @if (statusClass == "ready")
                                     {
-                                        <i class="bi bi-file-earmark-pdf-fill" style="color: #DC2626;"></i>
+                                        <i class="bi bi-check-circle-fill"></i>
                                     }
-                                    else if (fileExtension == "DOC" || fileExtension == "DOCX")
+                                    else if (statusClass == "processing")
                                     {
-                                        <i class="bi bi-file-earmark-word-fill" style="color: #2563EB;"></i>
+                                        <i class="bi bi-hourglass-split"></i>
                                     }
                                     else
                                     {
-                                        <i class="bi bi-file-earmark-text-fill"></i>
+                                        <i class="bi bi-exclamation-circle-fill"></i>
                                     }
-                                </div>
+                                    @statusLabel
+                                </span>
                             </div>
 
-                            <!-- Tiêu đề tệp -->
-                            <h3 class="doc-title" title="@doc.FileName">
-                                @doc.FileName
-                            </h3>
+                            <a href="/Document/Details/@doc.Id" class="document-title-link">
+                                <h3 class="document-title" title="@doc.FileName">@doc.FileName</h3>
+                            </a>
 
-                            <!-- Thông tin phụ -->
-                            <div class="doc-meta">
-                                <div class="doc-meta-item">
-                                    <span><i class="bi bi-calendar3 me-1"></i> Ngày tải:</span>
-                                    <strong>@doc.UploadedAt.ToString("dd/MM/yyyy")</strong>
-                                </div>
-                                <div class="doc-meta-item">
-                                    <span><i class="bi bi-person me-1"></i> Người tải:</span>
-                                    <strong class="text-truncate ms-2" style="max-width: 110px;" title="@uploaderName">@uploaderName</strong>
-                                </div>
+                            <div class="document-meta">
+                                <span class="document-uploader" title="Người tải lên: @uploaderName">
+                                    <i class="bi bi-person-circle"></i>
+                                    <strong>@uploaderName</strong>
+                                </span>
+                                <span class="document-date">@doc.UploadedAt.ToString("dd/MM/yyyy")</span>
                             </div>
                         </div>
-
-                        <!-- Nút chi tiết -->
-                        <div>
-                            @if (isCompleted)
-                            {
-                                <a href="/Document/Details/@doc.Id" class="btn-view-doc">
-                                    <span>Xem chi tiết</span>
-                                    <i class="bi bi-arrow-right"></i>
-                                </a>
-                            }
-                            else
-                            {
-                                <div class="btn-processing-box">
-                                    <i class="bi bi-hourglass-split me-1"></i> Đang xử lý...
-                                </div>
-                            }
-                        </div>
-                    </div>
+                    </article>
                 }
             </div>
         }
     </section>
-
 </div>
 
 @section Scripts {
@@ -592,13 +896,11 @@
         const searchInput = document.getElementById('searchInput');
         const suggestionsBox = document.getElementById('suggestionsBox');
 
-        // Lắng nghe sự kiện gõ phím vào ô tìm kiếm (Live Autocomplete)
-        searchInput.addEventListener('input', async function() {
+        searchInput.addEventListener('input', async function () {
             const query = this.value.trim();
-
             if (query.length < 2) {
                 suggestionsBox.style.display = 'none';
-                suggestionsBox.innerHTML = '';
+                suggestionsBox.replaceChildren();
                 return;
             }
 
@@ -607,38 +909,37 @@
                 if (!response.ok) return;
 
                 const items = await response.json();
-
+                suggestionsBox.replaceChildren();
                 if (!items || items.length === 0) {
                     suggestionsBox.style.display = 'none';
                     return;
                 }
 
-                let html = '';
                 items.forEach(item => {
-                    html += `<a href="/Document/Details/${item.id}" class="suggestion-item">
-                                <i class="bi bi-file-earmark-pdf-fill" style="color: #DC2626;"></i> 
-                                <span>${escapeHtml(item.fileName)}</span>
-                             </a>`;
+                    const link = document.createElement('a');
+                    link.href = `/Document/Details/${item.id}`;
+                    link.className = 'suggestion-item';
+                    link.setAttribute('role', 'option');
+
+                    const icon = document.createElement('i');
+                    icon.className = 'bi bi-file-earmark-pdf-fill';
+                    icon.style.color = '#14734D';
+                    const name = document.createElement('span');
+                    name.textContent = item.fileName || 'Tài liệu PDF';
+                    link.append(icon, name);
+                    suggestionsBox.append(link);
                 });
 
-                suggestionsBox.innerHTML = html;
                 suggestionsBox.style.display = 'block';
-
-            } catch (err) {
-                console.error("Lỗi khi tải gợi ý tìm kiếm:", err);
+            } catch (error) {
+                console.error('Không thể tải gợi ý tài liệu:', error);
             }
         });
 
-        // Ẩn khung gợi ý khi click ra ngoài
-        document.addEventListener('click', function(e) {
-            if (!searchInput.contains(e.target) && !suggestionsBox.contains(e.target)) {
+        document.addEventListener('click', function (event) {
+            if (!searchInput.contains(event.target) && !suggestionsBox.contains(event.target)) {
                 suggestionsBox.style.display = 'none';
             }
         });
-
-        function escapeHtml(text) {
-            if (!text) return '';
-            return String(text).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-        }
     </script>
 }

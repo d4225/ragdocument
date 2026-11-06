@@ -3,6 +3,7 @@
 public class ChatSession
 {
     public Guid Id { get; set; } = Guid.NewGuid();
+    public Guid? DocumentId { get; set; }
     public string Title { get; set; } = "Cuộc trò chuyện mới";
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 

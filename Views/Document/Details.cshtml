@@ -482,7 +482,14 @@
         color: var(--color-text-title);
         border: 1.5px solid var(--color-card-border);
         border-radius: 14px 14px 14px 3px;
+        line-height: 1.6;
+        overflow-wrap: anywhere;
     }
+
+    .assistant-bubble h3, .assistant-bubble h4 { margin: 8px 0 4px; color: var(--color-teal-dark); font-size: 13px; }
+    .assistant-bubble ul { margin: 5px 0 5px 18px; padding: 0; }
+    .assistant-bubble li { margin: 2px 0; }
+    .assistant-bubble strong { color: var(--color-teal-dark); }
 
     .citation-block {
         font-size: 11.5px;
@@ -740,15 +747,52 @@
 
 <!-- JAVASCRIPT XỬ LÝ CHAT BUBBLES & STREAMING RAG -->
 <script>
-    function startNewChat() {
+    let activeChatSessionId = null;
+
+    document.addEventListener('DOMContentLoaded', loadDocumentChatHistory);
+
+    async function loadDocumentChatHistory() {
+        const documentId = '@Model.Id';
+        try {
+            const response = await fetch(`/api/Document/${documentId}/chat-history`);
+            if (!response.ok) return;
+            const session = await response.json();
+            if (!session) return;
+
+            activeChatSessionId = session.id;
+            const container = document.getElementById('chatContainer');
+            container.innerHTML = '';
+            for (const message of session.messages || []) {
+                const citations = message.citationsJson ? JSON.parse(message.citationsJson) : [];
+                appendMessage(message.sender, message.content, citations);
+            }
+            if (!session.messages || session.messages.length === 0) showChatEmptyState('Đã mở cuộc trò chuyện mới', 'Bạn muốn tìm hiểu thêm điều gì về tài liệu?');
+            scrollToBottom();
+        } catch (error) {
+            console.error('Không thể tải lịch sử chat:', error);
+        }
+    }
+
+    function showChatEmptyState(title, description) {
         document.getElementById('chatContainer').innerHTML = `
-                    <div class="chat-empty-intro" id="chatEmptyState">
-                        <i class="bi bi-chat-quote-fill"></i>
-                        <div class="font-serif-academic fw-bold" style="color: var(--color-teal-dark); font-size: 14px; margin-bottom: 2px;">
-                            Đã mở cuộc trò chuyện mới
-                        </div>
-                        <p style="font-size: 12px; margin: 0;">Bạn muốn tìm hiểu thêm điều gì về tài liệu?</p>
-                    </div>`;
+            <div class="chat-empty-intro" id="chatEmptyState">
+                <i class="bi bi-chat-quote-fill"></i>
+                <div class="font-serif-academic fw-bold" style="color: var(--color-teal-dark); font-size: 14px; margin-bottom: 2px;">${escapeHtml(title)}</div>
+                <p style="font-size: 12px; margin: 0;">${escapeHtml(description)}</p>
+            </div>`;
+    }
+
+    async function startNewChat() {
+        const documentId = '@Model.Id';
+        try {
+            const response = await fetch(`/api/Document/${documentId}/chat-sessions`, { method: 'POST' });
+            if (!response.ok) throw new Error('Không thể tạo cuộc trò chuyện mới.');
+            const result = await response.json();
+            activeChatSessionId = result.sessionId;
+            showChatEmptyState('Đã mở cuộc trò chuyện mới', 'Bạn muốn tìm hiểu thêm điều gì về tài liệu?');
+        } catch (error) {
+            alert(error.message);
+        }
     }
 
     async function handleSendRagChat(event, documentId) {
@@ -780,7 +824,8 @@
                 body: JSON.stringify({
                     question: question,
                     topK: 4,
-                    documentIds: [documentId]
+                    documentIds: [documentId],
+                    sessionId: activeChatSessionId
                 })
             });
 
@@ -807,6 +852,8 @@
                                 scrollToBottom();
                             }
                             if (json.done && json.citations) {
+                                activeChatSessionId = json.sessionId || activeChatSessionId;
+                                document.getElementById(bubbleId).innerHTML = formatAssistantText(fullText);
                                 appendCitationsToBubble(bubbleId, json.citations);
                             }
                             if (json.error) {
@@ -855,13 +902,13 @@
         citeHeader.style.color = 'var(--color-text-sub)';
         citeHeader.style.letterSpacing = '0.5px';
         citeHeader.style.marginBottom = '3px';
-        citeHeader.innerText = 'TRÍCH DẪN NGUỒN:';
+        citeHeader.innerText = 'NGUỒN THAM KHẢO';
         citeWrapper.appendChild(citeHeader);
 
         citations.forEach(c => {
             const citeBox = document.createElement('div');
             citeBox.className = 'citation-block';
-            citeBox.innerHTML = `<strong>📄 ${escapeHtml(c.documentName)}</strong>:<br/><em>"${escapeHtml(c.snippet)}"</em>`;
+            citeBox.innerHTML = `<strong>Trang ${Number(c.pageNumber) > 0 ? Number(c.pageNumber) : '—'}</strong>`;
             citeWrapper.appendChild(citeBox);
         });
 
@@ -870,7 +917,7 @@
     }
 
     // TẠO BONG BÓNG CHAT CHUẨN (USER / AI)
-    function appendMessage(sender, content) {
+    function appendMessage(sender, content, citations = []) {
         const chatContainer = document.getElementById('chatContainer');
         const isUser = sender === 'user';
         const row = document.createElement('div');
@@ -884,8 +931,15 @@
         } else {
             row.innerHTML = `
                         <div class="chat-avatar ai-avatar" title="Trợ lý AI"><i class="bi bi-robot"></i></div>
-                        <div class="bubble-content assistant-bubble">${escapeHtml(content)}</div>
+                        <div class="bubble-content assistant-bubble">${formatAssistantText(content)}</div>
                     `;
+            const bubble = row.querySelector('.assistant-bubble');
+            if (citations.length) {
+                bubble.id = 'history-bubble-' + Date.now() + '-' + Math.random().toString(16).slice(2);
+                chatContainer.appendChild(row);
+                appendCitationsToBubble(bubble.id, citations);
+                return;
+            }
         }
 
         chatContainer.appendChild(row);
@@ -899,5 +953,21 @@
     function escapeHtml(text) {
         if (!text) return '';
         return String(text).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    }
+
+    function formatAssistantText(text) {
+        let html = escapeHtml(text || '').replace(/\r\n/g, '\n');
+        html = html.replace(/^###\s+(.+)$/gm, '<h4>$1</h4>')
+            .replace(/^##\s+(.+)$/gm, '<h3>$1</h3>')
+            .replace(/^#\s+(.+)$/gm, '<h3>$1</h3>')
+            .replace(/\*\*(.+?)\*\*/gs, '<strong>$1</strong>')
+            .replace(/__(.+?)__/gs, '<strong>$1</strong>')
+            .replace(/(?<!\*)\*([^*\n]+)\*(?!\*)/g, '<em>$1</em>')
+            .replace(/(?<!_)_([^_\n]+)_(?!_)/g, '<em>$1</em>')
+            .replace(/^\s*[-*]\s+(.+)$/gm, '<li>$1</li>')
+            .replace(/(?:<li>.*<\/li>\n?)+/gs, '<ul>$&</ul>')
+            .replace(/\n/g, '<br>')
+            .replace(/\*\*/g, '').replace(/__/g, '');
+        return html;
     }
 </script>

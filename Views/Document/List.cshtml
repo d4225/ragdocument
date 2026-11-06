@@ -6,7 +6,8 @@
     var totalDocs = Model?.Count ?? 0;
     var completedDocs = Model?.Count(d => d.Status == "Completed") ?? 0;
     var rejectedDocs = Model?.Count(d => d.Status == "Rejected") ?? 0;
-    var processingDocs = totalDocs - completedDocs - rejectedDocs;
+    var failedDocs = Model?.Count(d => d.Status == "Failed") ?? 0;
+    var processingDocs = Model?.Count(d => d.Status == "Processing") ?? 0;
     var currentUsername = Context.Session.GetString("Username") ?? "Người dùng";
 }
 
@@ -83,12 +84,18 @@
             box-shadow: 0 6px 16px rgba(245, 166, 35, 0.35);
         }
 
-    /* 3. LƯỚI THỐNG KÊ (CSS GRID 4 CỘT) */
+    /* 3. LƯỚI THỐNG KÊ */
     .stats-grid {
         display: grid;
-        grid-template-columns: repeat(4, 1fr);
+        grid-template-columns: repeat(5, 1fr);
         gap: 16px;
         margin-bottom: 24px;
+    }
+
+    @@media (max-width: 1200px) {
+        .stats-grid {
+            grid-template-columns: repeat(3, 1fr);
+        }
     }
 
     @@media (max-width: 992px) {
@@ -289,6 +296,12 @@
         border: 1px solid #FCA5A5;
     }
 
+    .status-failed {
+        background-color: #FEF2F2;
+        color: #B91C1C;
+        border: 1px solid #FCA5A5;
+    }
+
     .rejected-reason-box {
         font-size: 11.5px;
         color: #991B1B;
@@ -353,6 +366,20 @@
         gap: 5px;
         background-color: #FEF2F2;
         color: #EF4444;
+        border: 1px solid #FCA5A5;
+        border-radius: 8px;
+        padding: 6px 12px;
+        font-size: 12px;
+        cursor: not-allowed;
+        white-space: nowrap;
+    }
+
+    .btn-failed-disabled {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        background-color: #FEF2F2;
+        color: #B91C1C;
         border: 1px solid #FCA5A5;
         border-radius: 8px;
         padding: 6px 12px;
@@ -449,7 +476,7 @@
             </div>
             <div>
                 <div class="stat-title">Tổng số tệp</div>
-                <div class="stat-number" style="color: var(--color-teal-dark);">@totalDocs</div>
+                <div class="stat-number" id="statTotalDocs" style="color: var(--color-teal-dark);">@totalDocs</div>
             </div>
         </div>
 
@@ -460,7 +487,7 @@
             </div>
             <div>
                 <div class="stat-title">Đã sẵn sàng</div>
-                <div class="stat-number" style="color: #2E7D32;">@completedDocs</div>
+                <div class="stat-number" id="statCompletedDocs" style="color: #2E7D32;">@completedDocs</div>
             </div>
         </div>
 
@@ -471,7 +498,7 @@
             </div>
             <div>
                 <div class="stat-title">Đang xử lý</div>
-                <div class="stat-number" style="color: #D97706;">@processingDocs</div>
+                <div class="stat-number" id="statProcessingDocs" style="color: #D97706;">@processingDocs</div>
             </div>
         </div>
 
@@ -482,7 +509,18 @@
             </div>
             <div>
                 <div class="stat-title">Bị từ chối</div>
-                <div class="stat-number" style="color: #EF4444;">@rejectedDocs</div>
+                <div class="stat-number" id="statRejectedDocs" style="color: #EF4444;">@rejectedDocs</div>
+            </div>
+        </div>
+
+        <!-- Xử lý lỗi -->
+        <div class="academic-card stat-card">
+            <div class="stat-icon-wrapper" style="background-color: #FEF2F2; color: #B91C1C;">
+                <i class="bi bi-exclamation-triangle-fill"></i>
+            </div>
+            <div>
+                <div class="stat-title">Lỗi xử lý</div>
+                <div class="stat-number" id="statFailedDocs" style="color: #B91C1C;">@failedDocs</div>
             </div>
         </div>
     </section>
@@ -538,7 +576,7 @@
                             var isCompleted = doc.Status == "Completed";
                             var isRejected = doc.Status == "Rejected";
 
-                            <tr>
+                            <tr data-document-id="@doc.Id" data-status="@doc.Status">
                                 <!-- Cột Tên file -->
                                 <td style="padding-left: 18px;">
                                     <div class="doc-name-cell">
@@ -554,34 +592,40 @@
                                 </td>
 
                                 <!-- Cột Trạng thái & Lý do kiểm duyệt -->
-                                <td>
+                                <td class="document-status-cell" data-status="@doc.Status" data-reject-reason="@doc.RejectReason">
                                     @if (isCompleted)
                                     {
-                                        <span class="badge-status status-completed">
+                                        <span class="badge-status status-completed" data-status-badge>
                                             <i class="bi bi-check-circle-fill"></i> Sẵn sàng
                                         </span>
                                     }
                                     else if (isRejected)
                                     {
-                                        <span class="badge-status status-rejected">
+                                        <span class="badge-status status-rejected" data-status-badge>
                                             <i class="bi bi-shield-exclamation"></i> Bị từ chối
                                         </span>
                                         @if (!string.IsNullOrEmpty(doc.RejectReason))
                                         {
-                                            <div class="rejected-reason-box" title="Lý do chi tiết từ AI">
+                                                <div class="rejected-reason-box" data-reject-reason-box title="Lý do chi tiết từ AI">
                                                 <i class="bi bi-info-circle-fill"></i> @doc.RejectReason
                                             </div>
                                         }
                                         else
                                         {
-                                            <div class="rejected-reason-box">
+                                            <div class="rejected-reason-box" data-reject-reason-box>
                                                 <i class="bi bi-info-circle-fill"></i> Vi phạm tiêu chuẩn nội dung an toàn.
                                             </div>
                                         }
                                     }
+                                    else if (doc.Status == "Failed")
+                                    {
+                                        <span class="badge-status status-failed" data-status-badge>
+                                            <i class="bi bi-exclamation-triangle-fill"></i> Lỗi xử lý
+                                        </span>
+                                    }
                                     else
                                     {
-                                        <span class="badge-status status-processing">
+                                        <span class="badge-status status-processing" data-status-badge>
                                             <i class="bi bi-hourglass-split"></i> Đang xử lý...
                                         </span>
                                     }
@@ -592,19 +636,25 @@
                                     <div class="action-buttons-group">
                                         @if (isCompleted)
                                         {
-                                            <a href="/Document/Details/@doc.Id" class="btn-chat-action">
+                                            <a href="/Document/Details/@doc.Id" class="btn-chat-action" data-document-action>
                                                 <i class="bi bi-chat-quote-fill"></i> Hỏi đáp
                                             </a>
                                         }
                                         else if (isRejected)
                                         {
-                                            <button class="btn-rejected-disabled" disabled title="Tài liệu này vi phạm tiêu chuẩn an toàn nên không thể sử dụng.">
+                                            <button class="btn-rejected-disabled" data-document-action disabled title="Tài liệu này vi phạm tiêu chuẩn an toàn nên không thể sử dụng.">
                                                 <i class="bi bi-x-circle-fill"></i> Không khả dụng
+                                            </button>
+                                        }
+                                        else if (doc.Status == "Failed")
+                                        {
+                                            <button class="btn-failed-disabled" data-document-action disabled title="Xử lý tài liệu thất bại. Vui lòng tải lại tài liệu để thử lại.">
+                                                <i class="bi bi-exclamation-triangle-fill"></i> Lỗi xử lý
                                             </button>
                                         }
                                         else
                                         {
-                                            <button class="btn-processing-disabled" disabled title="Hệ thống đang bóc tách nội dung và kiểm duyệt an toàn...">
+                                            <button class="btn-processing-disabled" data-document-action disabled title="Hệ thống đang bóc tách nội dung và kiểm duyệt an toàn...">
                                                 <span class="spinner-dot"></span> Đang xử lý
                                             </button>
                                         }
@@ -652,4 +702,124 @@
             }
         }
     }
+
+    const documentStatusUrl = "/api/Document/my-statuses";
+    let statusPollInProgress = false;
+
+    function updateDocumentRow(row, status, rejectReason) {
+        const normalizedStatus = ["Completed", "Rejected", "Failed"].includes(status)
+            ? status
+            : "Processing";
+        const statusCell = row.querySelector(".document-status-cell");
+        const statusLabel = {
+            Completed: "Sẵn sàng",
+            Rejected: "Bị từ chối",
+            Failed: "Lỗi xử lý",
+            Processing: "Đang xử lý..."
+        }[normalizedStatus];
+        const iconClass = {
+            Completed: "bi-check-circle-fill",
+            Rejected: "bi-shield-exclamation",
+            Failed: "bi-exclamation-triangle-fill",
+            Processing: "bi-hourglass-split"
+        }[normalizedStatus];
+
+        const badge = document.createElement("span");
+        badge.className = `badge-status status-${normalizedStatus.toLowerCase()}`;
+        const badgeIcon = document.createElement("i");
+        badgeIcon.className = `bi ${iconClass}`;
+        badge.append(badgeIcon, document.createTextNode(` ${statusLabel}`));
+        statusCell.replaceChildren(badge);
+
+        if (normalizedStatus === "Rejected") {
+            const reasonBox = document.createElement("div");
+            reasonBox.className = "rejected-reason-box";
+            reasonBox.title = "Lý do chi tiết từ AI";
+            const reasonIcon = document.createElement("i");
+            reasonIcon.className = "bi bi-info-circle-fill";
+            reasonBox.append(
+                reasonIcon,
+                document.createTextNode(` ${rejectReason || "Vi phạm tiêu chuẩn nội dung an toàn."}`)
+            );
+            statusCell.append(reasonBox);
+        }
+
+        const currentAction = row.querySelector("[data-document-action]");
+        if (currentAction) {
+            let nextAction;
+            if (normalizedStatus === "Completed") {
+                nextAction = document.createElement("a");
+                nextAction.href = `/Document/Details/${row.dataset.documentId}`;
+                nextAction.className = "btn-chat-action";
+                const chatIcon = document.createElement("i");
+                chatIcon.className = "bi bi-chat-quote-fill";
+                nextAction.append(chatIcon, document.createTextNode(" Hỏi đáp"));
+            } else {
+                nextAction = document.createElement("button");
+                nextAction.disabled = true;
+                if (normalizedStatus === "Rejected") {
+                    nextAction.className = "btn-rejected-disabled";
+                    nextAction.title = "Tài liệu này vi phạm tiêu chuẩn an toàn nên không thể sử dụng.";
+                    nextAction.innerHTML = '<i class="bi bi-x-circle-fill"></i> Không khả dụng';
+                } else if (normalizedStatus === "Failed") {
+                    nextAction.className = "btn-failed-disabled";
+                    nextAction.title = "Xử lý tài liệu thất bại. Vui lòng tải lại tài liệu để thử lại.";
+                    nextAction.innerHTML = '<i class="bi bi-exclamation-triangle-fill"></i> Lỗi xử lý';
+                } else {
+                    nextAction.className = "btn-processing-disabled";
+                    nextAction.title = "Hệ thống đang bóc tách nội dung và kiểm duyệt an toàn...";
+                    nextAction.innerHTML = '<span class="spinner-dot"></span> Đang xử lý';
+                }
+            }
+
+            nextAction.setAttribute("data-document-action", "");
+            currentAction.replaceWith(nextAction);
+        }
+
+        statusCell.dataset.status = normalizedStatus;
+        row.dataset.status = normalizedStatus;
+    }
+
+    function updateDocumentStats(rows) {
+        const statuses = rows.map(row => row.dataset.status);
+        document.getElementById("statTotalDocs").textContent = statuses.length;
+        document.getElementById("statCompletedDocs").textContent = statuses.filter(status => status === "Completed").length;
+        document.getElementById("statProcessingDocs").textContent = statuses.filter(status => status === "Processing").length;
+        document.getElementById("statRejectedDocs").textContent = statuses.filter(status => status === "Rejected").length;
+        document.getElementById("statFailedDocs").textContent = statuses.filter(status => status === "Failed").length;
+    }
+
+    async function refreshDocumentStatuses() {
+        if (statusPollInProgress || document.visibilityState !== "visible") return;
+        statusPollInProgress = true;
+
+        try {
+            const response = await fetch(documentStatusUrl, {
+                method: "GET",
+                headers: { "Accept": "application/json" },
+                cache: "no-store"
+            });
+            if (!response.ok) return;
+
+            const statuses = await response.json();
+            const rows = Array.from(document.querySelectorAll("#docTable tbody tr[data-document-id]"));
+            const statusesById = new Map(statuses.map(item => [item.documentId.toLowerCase(), item]));
+
+            for (const row of rows) {
+                const current = statusesById.get(row.dataset.documentId.toLowerCase());
+                if (current && row.dataset.status !== current.status) {
+                    updateDocumentRow(row, current.status, current.rejectReason);
+                }
+            }
+
+            updateDocumentStats(rows);
+        } catch {
+            // Mạng tạm thời gián đoạn; lần kiểm tra tiếp theo sẽ thử lại.
+        } finally {
+            statusPollInProgress = false;
+        }
+    }
+
+    refreshDocumentStatuses();
+    window.setInterval(refreshDocumentStatuses, 2500);
 </script>

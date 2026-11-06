@@ -53,7 +53,11 @@ namespace SmartDocumentRAG.API.Controllers
                 .OrderByDescending(d => d.UploadedAt)
                 .AsQueryable();
 
-            if (!string.IsNullOrWhiteSpace(searchString))
+            if (string.IsNullOrWhiteSpace(searchString))
+            {
+                query = query.Take(4);
+            }
+            else
             {
                 searchString = searchString.Trim();
                 query = query.Where(d => d.FileName.Contains(searchString) ||
@@ -85,6 +89,30 @@ namespace SmartDocumentRAG.API.Controllers
                 .ToListAsync();
 
             return View(docs);
+        }
+
+        // Cung cấp trạng thái tài liệu của người dùng để trang danh sách tự cập nhật.
+        [HttpGet("api/Document/my-statuses")]
+        public async Task<IActionResult> GetMyDocumentStatuses(CancellationToken cancellationToken)
+        {
+            var userIdString = HttpContext.Session.GetString("UserId");
+            if (!Guid.TryParse(userIdString, out var userId))
+            {
+                return Unauthorized();
+            }
+
+            var documents = await _db.Documents
+                .AsNoTracking()
+                .Where(document => document.UserId == userId)
+                .Select(document => new
+                {
+                    documentId = document.Id,
+                    status = document.Status,
+                    rejectReason = document.RejectReason
+                })
+                .ToListAsync(cancellationToken);
+
+            return Ok(documents);
         }
 
         // Trang Chi tiết & Hỏi đáp riêng cho 1 tài liệu (URL: /Document/Details/{id})
@@ -331,6 +359,49 @@ namespace SmartDocumentRAG.API.Controllers
             return Ok(messages);
         }
 
+        [HttpGet("api/Document/{documentId:guid}/chat-history")]
+        public async Task<IActionResult> GetDocumentChatHistory(Guid documentId)
+        {
+            var userIdString = HttpContext.Session.GetString("UserId");
+            if (!Guid.TryParse(userIdString, out var userId)) return Unauthorized();
+
+            var ownsDocument = await _db.Documents.AnyAsync(d => d.Id == documentId && d.UserId == userId);
+            if (!ownsDocument) return NotFound();
+
+            var session = await _db.ChatSessions
+                .Where(s => s.DocumentId == documentId)
+                .OrderByDescending(s => s.CreatedAt)
+                .Select(s => new
+                {
+                    s.Id,
+                    Messages = s.Messages.OrderBy(m => m.CreatedAt).Select(m => new
+                    {
+                        m.Sender,
+                        m.Content,
+                        m.CreatedAt,
+                        m.CitationsJson
+                    }).ToList()
+                })
+                .FirstOrDefaultAsync();
+
+            return Ok(session);
+        }
+
+        [HttpPost("api/Document/{documentId:guid}/chat-sessions")]
+        public async Task<IActionResult> CreateDocumentChatSession(Guid documentId)
+        {
+            var userIdString = HttpContext.Session.GetString("UserId");
+            if (!Guid.TryParse(userIdString, out var userId)) return Unauthorized();
+
+            var document = await _db.Documents.FirstOrDefaultAsync(d => d.Id == documentId && d.UserId == userId);
+            if (document == null) return NotFound();
+
+            var session = new ChatSession { DocumentId = documentId };
+            _db.ChatSessions.Add(session);
+            await _db.SaveChangesAsync();
+            return Ok(new { sessionId = session.Id });
+        }
+
         // POST: /api/Document/chat-stream (Server-Sent Events Realtime Streaming)
         [HttpPost("api/Document/chat-stream")]
         public async Task ChatStream([FromBody] ChatRequestDto request, CancellationToken cancellationToken)
@@ -341,6 +412,37 @@ namespace SmartDocumentRAG.API.Controllers
 
             try
             {
+                var userIdString = HttpContext.Session.GetString("UserId");
+                if (!Guid.TryParse(userIdString, out var userId))
+                {
+                    Response.StatusCode = StatusCodes.Status401Unauthorized;
+                    return;
+                }
+
+                var documentId = request.DocumentIds?.SingleOrDefault();
+                if (documentId == Guid.Empty || documentId == null ||
+                    !await _db.Documents.AnyAsync(d => d.Id == documentId && d.UserId == userId, cancellationToken))
+                {
+                    Response.StatusCode = StatusCodes.Status404NotFound;
+                    return;
+                }
+
+                ChatSession session;
+                if (request.SessionId.HasValue && request.SessionId.Value != Guid.Empty)
+                {
+                    session = await _db.ChatSessions
+                        .Include(s => s.Messages.OrderByDescending(m => m.CreatedAt).Take(6))
+                        .FirstOrDefaultAsync(s => s.Id == request.SessionId.Value && s.DocumentId == documentId, cancellationToken)
+                        ?? throw new InvalidOperationException("Không tìm thấy phiên trò chuyện của tài liệu.");
+                }
+                else
+                {
+                    session = new ChatSession { DocumentId = documentId.Value };
+                    _db.ChatSessions.Add(session);
+                    await _db.SaveChangesAsync(cancellationToken);
+                }
+
+                var recentMessages = session.Messages.OrderBy(m => m.CreatedAt).ToList();
                 var topChunks = await _retrievalService.GetRelevantParentChunksAsync(
                     request.Question,
                     topK: request.TopK,
@@ -348,9 +450,16 @@ namespace SmartDocumentRAG.API.Controllers
                 );
 
                 var contextBuilder = new StringBuilder();
+                var historyBuilder = new StringBuilder();
+                foreach (var message in recentMessages)
+                {
+                    var role = message.Sender == "user" ? "Người dùng" : "Trợ lý AI";
+                    historyBuilder.AppendLine($"{role}: {message.Content}");
+                }
+
                 foreach (var chunk in topChunks)
                 {
-                    contextBuilder.AppendLine($"--- Nguồn: {chunk.Document?.FileName ?? "Tài liệu"} ---");
+                    contextBuilder.AppendLine($"--- Nguồn: {chunk.Document?.FileName ?? "Tài liệu"}, trang {chunk.PageNumber} ---");
                     contextBuilder.AppendLine(chunk.Content);
                     contextBuilder.AppendLine();
                 }
@@ -358,6 +467,10 @@ namespace SmartDocumentRAG.API.Controllers
                 var systemPrompt = $"""
                 Bạn là trợ lý AI chuyên phân tích văn bản. Trả lời câu hỏi dựa trên CONTEXT được cung cấp.
                 Nếu thông tin không nằm trong Context, hãy lịch sự trả lời "Tài liệu không đề cập".
+                Trình bày câu trả lời rõ ràng bằng Markdown đơn giản, không lặp lại dấu định dạng và không tự tạo số trang hoặc trích dẫn.
+
+                LỊCH SỬ TRÒ CHUYỆN:
+                {historyBuilder}
 
                 CONTEXT TÀI LIỆU:
                 {contextBuilder}
@@ -366,8 +479,10 @@ namespace SmartDocumentRAG.API.Controllers
                 {request.Question}
                 """;
 
+                var answerBuilder = new StringBuilder();
                 await foreach (var chunk in _geminiService.StreamAnswerAsync(systemPrompt).WithCancellation(cancellationToken))
                 {
+                    answerBuilder.Append(chunk);
                     var data = JsonSerializer.Serialize(new { text = chunk });
                     await Response.WriteAsync($"data: {data}\n\n", cancellationToken);
                     await Response.Body.FlushAsync(cancellationToken);
@@ -375,11 +490,28 @@ namespace SmartDocumentRAG.API.Controllers
 
                 var citations = topChunks.Select(c => new CitationDto
                 {
+                    DocumentId = c.DocumentId,
                     DocumentName = c.Document?.FileName ?? "Tài liệu",
-                    Snippet = c.Content.Length > 150 ? c.Content.Substring(0, 150) + "..." : c.Content
+                    PageNumber = c.PageNumber,
+                    Snippet = c.Content.Length > 500 ? c.Content.Substring(0, 500).TrimEnd() + "…" : c.Content
                 }).ToList();
 
-                var endData = JsonSerializer.Serialize(new { done = true, citations });
+                _db.ChatMessages.AddRange(
+                    new ChatMessage { ChatSessionId = session.Id, Sender = "user", Content = request.Question },
+                    new ChatMessage
+                    {
+                        ChatSessionId = session.Id,
+                        Sender = "assistant",
+                        Content = answerBuilder.ToString(),
+                        CitationsJson = JsonSerializer.Serialize(citations, new JsonSerializerOptions(JsonSerializerDefaults.Web))
+                    });
+                if (session.Title == "Cuộc trò chuyện mới")
+                    session.Title = request.Question.Length > 60 ? request.Question[..60] + "…" : request.Question;
+                await _db.SaveChangesAsync(cancellationToken);
+
+                var endData = JsonSerializer.Serialize(
+                    new { done = true, sessionId = session.Id, citations },
+                    new JsonSerializerOptions(JsonSerializerDefaults.Web));
                 await Response.WriteAsync($"data: {endData}\n\n", cancellationToken);
                 await Response.Body.FlushAsync(cancellationToken);
             }

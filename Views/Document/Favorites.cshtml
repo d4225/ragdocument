@@ -1,0 +1,95 @@
+@model List<SmartDocumentRAG.API.Models.Document>
+
+@{
+    Layout = "~/Views/Shared/_Layout.cshtml";
+    ViewData["Title"] = "Tài liệu yêu thích";
+}
+
+<style>
+    .favorites-page { width: min(1480px, 100%); margin: 0 auto; padding: 30px 30px 48px; }
+    .favorites-heading { position:relative; overflow:hidden; display:flex; align-items:center; justify-content:space-between; gap:24px; min-height:178px; margin-bottom:22px; padding:30px 34px; border:1px solid #E4C15D; border-radius:22px; background:linear-gradient(112deg,#12382F 0%,#0E4A38 72%,#12614A 100%); box-shadow:0 12px 28px rgba(18,56,47,.12); }
+    .favorites-heading::after { content:""; position:absolute; width:270px; height:270px; right:115px; top:-180px; border:1px solid rgba(245,181,46,.32); border-radius:50%; }
+    .favorites-heading-copy { position:relative; z-index:1; }
+    .favorites-kicker { display:inline-flex; align-items:center; gap:8px; margin-bottom:8px; color:#F5B52E; font-size:11px; font-weight:700; letter-spacing:1px; text-transform:uppercase; }
+    .favorites-title { margin:0; color:#fff; font-size:clamp(1.6rem,3vw,2.2rem); font-weight:700; }
+    .favorites-description { max-width:540px; margin:8px 0 0; color:rgba(255,255,255,.82); font-size:13px; line-height:1.7; }
+    .favorites-count { position:relative; z-index:1; flex:0 0 auto; min-width:122px; padding:15px 18px; border:1px solid rgba(255,255,255,.25); border-radius:16px; background:rgba(255,255,255,.1); color:#fff; text-align:center; font-size:12px; }
+    .favorites-count strong { display:block; color:#F5B52E; font-size:27px; line-height:1.15; }
+    .favorites-grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:18px; }
+    .favorite-card { min-width:0; overflow:hidden; border:1.5px solid #DCE9E0; border-radius:16px; background:#fff; box-shadow:0 4px 14px rgba(18,64,53,.05); transition:transform .2s ease,box-shadow .2s ease,border-color .2s ease; }
+    .favorite-card:hover { transform:translateY(-3px); border-color:#F5B52E; box-shadow:0 12px 24px rgba(18,64,53,.1); }
+    .favorite-preview { position:relative; height:180px; overflow:hidden; border-bottom:1px solid #DCE9E0; background:linear-gradient(145deg,#E8F4EB,#fff 55%,#FFF4D4); }
+    .favorite-preview iframe { position:absolute; inset:0; width:100%; height:100%; border:0; pointer-events:none; }
+    .favorite-preview-link { position:absolute; z-index:1; inset:0; }
+    .favorite-preview-label { position:absolute; z-index:2; left:11px; bottom:10px; padding:5px 9px; border-radius:7px; background:rgba(255,255,255,.94); color:#173831; font-size:10px; font-weight:700; pointer-events:none; }
+    .favorite-preview-label i { color:#14734D; }
+    .favorite-toggle-form { position:absolute; z-index:3; top:10px; right:10px; }
+    .favorite-toggle-button { width:36px; height:36px; display:grid; place-items:center; border:1.5px solid #DC3545; border-radius:50%; background:#fff; color:#DC3545; cursor:pointer; box-shadow:0 3px 10px rgba(18,64,53,.14); }
+    .favorite-card-body { padding:15px 16px 17px; }
+    .favorite-card-type { margin-bottom:8px; color:#14734D; font-size:10px; font-weight:700; letter-spacing:.7px; text-transform:uppercase; }
+    .favorite-card-title { min-height:44px; display:-webkit-box; overflow:hidden; -webkit-box-orient:vertical; -webkit-line-clamp:2; margin:0; color:#173831; font-size:14px; line-height:1.55; }
+    .favorite-card-title a { color:inherit; text-decoration:none; }
+    .favorite-card-title a:hover { color:#14734D; }
+    .favorite-card-meta { display:flex; justify-content:space-between; gap:8px; margin-top:12px; padding-top:10px; border-top:1px solid #E8F4EB; color:#4A6855; font-size:11px; }
+    .favorites-empty { position:relative; overflow:hidden; display:grid; grid-template-columns:auto 1fr; align-items:center; gap:24px; min-height:225px; padding:38px clamp(24px,6vw,70px); border:1px solid #DCE9E0; border-radius:20px; background:linear-gradient(115deg,#E8F4EB,#fff 66%,#FFF4D4); }
+    .favorites-empty-icon { width:78px; height:78px; display:grid; place-items:center; border:1px solid #E4C15D; border-radius:23px; background:#fff; color:#DC3545; font-size:32px; box-shadow:0 8px 22px rgba(18,64,53,.08); }
+    .favorites-empty h2 { margin:0 0 7px; color:#173831; font-size:20px; }
+    .favorites-empty p { margin:0 0 18px; color:#4A6855; font-size:13px; }
+    .favorites-empty a { display:inline-flex; align-items:center; gap:8px; padding:10px 15px; border-radius:10px; background:#14734D; color:#fff; font-size:12px; font-weight:700; text-decoration:none; }
+    .favorites-empty a:hover { background:#173831; }
+    @@media(max-width:1100px) { .favorites-grid { grid-template-columns:repeat(3,minmax(0,1fr)); } }
+    @@media(max-width:760px) { .favorites-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } .favorites-page { padding:24px 18px 36px; } }
+    @@media(max-width:500px) { .favorites-grid { grid-template-columns:1fr; } .favorites-heading { align-items:flex-start; flex-direction:column; padding:22px; } .favorites-count { display:flex; align-items:center; gap:8px; min-width:0; padding:9px 12px; } .favorites-count strong { font-size:18px; } .favorites-empty { grid-template-columns:1fr; justify-items:center; padding:30px 22px; text-align:center; } .favorite-preview { height:205px; } }
+</style>
+
+<div class="favorites-page">
+    <header class="favorites-heading">
+        <div class="favorites-heading-copy">
+            <div class="favorites-kicker"><i class="bi bi-heart-fill"></i> Bộ sưu tập của bạn</div>
+            <h1 class="favorites-title font-serif-academic">Tài liệu yêu thích</h1>
+            <p class="favorites-description">Gom những tài liệu quan trọng vào một nơi để bạn mở lại và tiếp tục khám phá bất cứ lúc nào.</p>
+        </div>
+        <div class="favorites-count"><strong>@Model.Count</strong> tài liệu đã lưu</div>
+    </header>
+
+    @if (Model.Count == 0)
+    {
+        <section class="favorites-empty">
+            <div class="favorites-empty-icon"><i class="bi bi-heart"></i></div>
+            <div>
+                <h2>Không gian yêu thích đang chờ tài liệu đầu tiên</h2>
+                <p>Chạm vào trái tim trên thẻ tài liệu để lưu lại. Tài liệu đã lưu sẽ xuất hiện tại đây và mở trực tiếp đến trang chi tiết.</p>
+                <a href="/Document"><i class="bi bi-journals"></i> Khám phá tài liệu</a>
+                <a href="/Document/List" style="margin-left:8px;background:#F5B52E;color:#173831;"><i class="bi bi-journal-bookmark"></i> Tài liệu của tôi</a>
+            </div>
+        </section>
+    }
+    else
+    {
+        <section class="favorites-grid" aria-label="Danh sách tài liệu yêu thích">
+            @foreach (var doc in Model)
+            {
+                <article class="favorite-card">
+                    <div class="favorite-preview">
+                        <iframe src="/api/Document/view/@doc.Id#page=1&toolbar=0&navpanes=0&scrollbar=0&zoom=page-width" title="Trang đầu của @doc.FileName" loading="lazy" tabindex="-1" aria-hidden="true"></iframe>
+                        <a href="/Document/Details/@doc.Id" class="favorite-preview-link" aria-label="Mở tài liệu @doc.FileName"></a>
+                        <span class="favorite-preview-label"><i class="bi bi-file-earmark-pdf-fill"></i> Trang đầu PDF</span>
+                        <form action="/Document/Favorite/@doc.Id" method="post" class="favorite-toggle-form">
+                            @Html.AntiForgeryToken()
+                            <input type="hidden" name="returnUrl" value="/Document/Favorites" />
+                            <button type="submit" class="favorite-toggle-button" title="Bỏ khỏi yêu thích" aria-label="Bỏ khỏi yêu thích"><i class="bi bi-heart-fill"></i></button>
+                        </form>
+                    </div>
+                    <div class="favorite-card-body">
+                        <div class="favorite-card-type"><i class="bi bi-heart-fill" style="color:#DC3545;"></i> Đã yêu thích</div>
+                        <h2 class="favorite-card-title"><a href="/Document/Details/@doc.Id" title="@doc.FileName">@doc.FileName</a></h2>
+                        <div class="favorite-card-meta">
+                            <span><i class="bi bi-person-circle"></i> @(doc.User?.Username ?? "Người dùng")</span>
+                            <span>@doc.UploadedAt.ToString("dd/MM/yyyy")</span>
+                        </div>
+                    </div>
+                </article>
+            }
+        </section>
+    }
+</div>

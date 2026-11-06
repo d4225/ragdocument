@@ -139,6 +139,24 @@ namespace SmartDocumentRAG.API.Migrations
                     b.ToTable("Documents");
                 });
 
+            modelBuilder.Entity("SmartDocumentRAG.API.Models.FavoriteDocument", b =>
+                {
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("DocumentId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("UserId", "DocumentId");
+
+                    b.HasIndex("DocumentId");
+
+                    b.ToTable("FavoriteDocuments");
+                });
+
             modelBuilder.Entity("SmartDocumentRAG.API.Models.ParentChunk", b =>
                 {
                     b.Property<Guid>("Id")
@@ -226,6 +244,21 @@ namespace SmartDocumentRAG.API.Migrations
                         .IsRequired();
 
                     b.Navigation("User");
+                });
+
+            modelBuilder.Entity("SmartDocumentRAG.API.Models.FavoriteDocument", b =>
+                {
+                    b.HasOne("SmartDocumentRAG.API.Models.Document", null)
+                        .WithMany()
+                        .HasForeignKey("DocumentId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("SmartDocumentRAG.API.Models.User", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("SmartDocumentRAG.API.Models.ParentChunk", b =>

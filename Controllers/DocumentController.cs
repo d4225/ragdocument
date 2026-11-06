@@ -66,6 +66,11 @@ namespace SmartDocumentRAG.API.Controllers
             }
 
             var docs = await query.ToListAsync();
+            var userId = Guid.Parse(userIdString);
+            ViewBag.FavoriteDocumentIds = await _db.FavoriteDocuments
+                .Where(favorite => favorite.UserId == userId)
+                .Select(favorite => favorite.DocumentId)
+                .ToHashSetAsync();
             return View(docs);
         }
 
@@ -88,7 +93,64 @@ namespace SmartDocumentRAG.API.Controllers
                 .OrderByDescending(d => d.UploadedAt)
                 .ToListAsync();
 
+            ViewBag.FavoriteDocumentIds = await _db.FavoriteDocuments
+                .Where(favorite => favorite.UserId == userId)
+                .Select(favorite => favorite.DocumentId)
+                .ToHashSetAsync();
+
             return View(docs);
+        }
+
+        [HttpGet("/Document/Favorites")]
+        [ApiExplorerSettings(IgnoreApi = true)]
+        public async Task<IActionResult> Favorites()
+        {
+            var userIdString = HttpContext.Session.GetString("UserId");
+            if (!Guid.TryParse(userIdString, out var userId))
+                return RedirectToAction("Login", "Account");
+
+            var favoriteDocumentIds = await _db.FavoriteDocuments
+                .Where(favorite => favorite.UserId == userId)
+                .OrderByDescending(favorite => favorite.CreatedAt)
+                .Select(favorite => favorite.DocumentId)
+                .ToListAsync();
+
+            var documentsById = await _db.Documents
+                .Include(document => document.User)
+                .Where(document => favoriteDocumentIds.Contains(document.Id))
+                .ToDictionaryAsync(document => document.Id);
+            var documents = favoriteDocumentIds
+                .Where(docId => documentsById.ContainsKey(docId))
+                .Select(docId => documentsById[docId])
+                .ToList();
+
+            return View(documents);
+        }
+
+        [HttpPost("/Document/Favorite/{id:guid}")]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ToggleFavorite(Guid id, string? returnUrl)
+        {
+            var userIdString = HttpContext.Session.GetString("UserId");
+            if (!Guid.TryParse(userIdString, out var userId))
+                return RedirectToAction("Login", "Account");
+
+            var exists = await _db.FavoriteDocuments
+                .AnyAsync(favorite => favorite.UserId == userId && favorite.DocumentId == id);
+            if (exists)
+            {
+                var favorite = await _db.FavoriteDocuments.FindAsync(userId, id);
+                if (favorite != null) _db.FavoriteDocuments.Remove(favorite);
+            }
+            else if (await _db.Documents.AnyAsync(document => document.Id == id))
+            {
+                _db.FavoriteDocuments.Add(new FavoriteDocument { UserId = userId, DocumentId = id });
+            }
+
+            await _db.SaveChangesAsync();
+            return !string.IsNullOrWhiteSpace(returnUrl) && Url.IsLocalUrl(returnUrl)
+                ? LocalRedirect(returnUrl)
+                : RedirectToAction(nameof(Favorites));
         }
 
         // Cung cấp trạng thái tài liệu của người dùng để trang danh sách tự cập nhật.

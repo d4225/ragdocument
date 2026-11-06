@@ -13,9 +13,18 @@ public class ApplicationDbContext : DbContext
     public DbSet<ChildChunk> ChildChunks => Set<ChildChunk>();
     public DbSet<ChatSession> ChatSessions { get; set; }
     public DbSet<ChatMessage> ChatMessages { get; set; }
+    public DbSet<FavoriteDocument> FavoriteDocuments => Set<FavoriteDocument>();
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
+
+        modelBuilder.Entity<FavoriteDocument>(entity =>
+        {
+            entity.HasKey(favorite => new { favorite.UserId, favorite.DocumentId });
+            entity.HasOne<User>().WithMany().HasForeignKey(favorite => favorite.UserId).OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne<Document>().WithMany().HasForeignKey(favorite => favorite.DocumentId).OnDelete(DeleteBehavior.Cascade);
+            entity.HasIndex(favorite => favorite.DocumentId);
+        });
 
         // Kích hoạt extension vector trong Postgres
         modelBuilder.HasPostgresExtension("vector");

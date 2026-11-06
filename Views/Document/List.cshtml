@@ -9,6 +9,7 @@
     var failedDocs = Model?.Count(d => d.Status == "Failed") ?? 0;
     var processingDocs = Model?.Count(d => d.Status == "Processing") ?? 0;
     var currentUsername = Context.Session.GetString("Username") ?? "Người dùng";
+    var favoriteDocumentIds = ViewBag.FavoriteDocumentIds as HashSet<Guid> ?? new HashSet<Guid>();
 }
 
 <style>
@@ -403,6 +404,10 @@
         justify-content: center;
     }
 
+    .btn-favorite-row { width: 36px; height: 36px; border: 1.5px solid #26332E; border-radius: 10px; background: #fff; color: #26332E; cursor: pointer; transition: .18s ease; }
+    .btn-favorite-row:hover { color: #DC3545; border-color: #DC3545; }
+    .btn-favorite-row.is-favorite { color: #DC3545; border-color: #DC3545; }
+
         .btn-delete-action:hover {
             background-color: #EF4444;
             color: #ffffff;
@@ -634,6 +639,13 @@
                                 <!-- Cột Hành động -->
                                 <td style="text-align: right; padding-right: 18px;">
                                     <div class="action-buttons-group">
+                                        <form action="/Document/Favorite/@doc.Id" method="post" style="display:inline;">
+                                            @Html.AntiForgeryToken()
+                                            <input type="hidden" name="returnUrl" value="@(Context.Request.Path + Context.Request.QueryString)" />
+                                            <button type="submit" class="btn-favorite-row @(favoriteDocumentIds.Contains(doc.Id) ? "is-favorite" : "")" title="@(favoriteDocumentIds.Contains(doc.Id) ? "Bỏ khỏi yêu thích" : "Thêm vào yêu thích")" aria-label="@(favoriteDocumentIds.Contains(doc.Id) ? "Bỏ khỏi yêu thích" : "Thêm vào yêu thích")">
+                                                <i class="bi @(favoriteDocumentIds.Contains(doc.Id) ? "bi-heart-fill" : "bi-heart")"></i>
+                                            </button>
+                                        </form>
                                         @if (isCompleted)
                                         {
                                             <a href="/Document/Details/@doc.Id" class="btn-chat-action" data-document-action>

@@ -221,69 +221,120 @@ ragdocument/
 
 ---
 
-## 🛠️ 6. Hướng Dẫn Cài Đặt & Chạy Hệ Thống
+## 🐳 6. Hướng Dẫn Chạy Bằng Docker Compose
 
-### 6.1. Yêu Cầu Môi Trường (Prerequisites)
-1. **.NET SDK 10.0** trở lên.
-2. **PostgreSQL 16+** đã cài đặt hoặc bật tiện ích mở rộng `pgvector`.  
-   *(Khuyến nghị chạy nhanh PostgreSQL kèm pgvector qua Docker):*
-   ```bash
-   docker run -d --name postgres-vector \
-     -e POSTGRES_USER=postgres \
-     -e POSTGRES_PASSWORD=postgres \
-     -e POSTGRES_DB=smartrag_db \
-     -p 5432:5432 \
-     pgvector/pgvector:pg16
-   ```
-3. **Google Gemini API Key** (Đăng ký miễn phí tại [Google AI Studio](https://aistudio.google.com/)).
+Docker Compose chạy ứng dụng ASP.NET Core và PostgreSQL có `pgvector` cùng nhau. Ứng dụng chạy ở cổng `8080`; PostgreSQL được mở ở cổng `5433` trên máy host để có thể kết nối bằng DBeaver. Giữa hai container, web kết nối database bằng hostname `db` và cổng nội bộ `5432`.
 
----
+### 6.1. Yêu cầu
 
-### 6.2. Cấu Hình Ứng Dụng (`appsettings.json`)
-Tạo hoặc cập nhật tệp `appsettings.json` tại thư mục gốc của dự án:
+- Docker Desktop đã cài và đang chạy (Docker Compose được tích hợp sẵn).
+- .NET SDK 10 để áp dụng EF Core migrations khi khởi tạo database mới.
+- Google Gemini API key để sử dụng các chức năng AI. Có thể tạo key tại [Google AI Studio](https://aistudio.google.com/).
 
-```json
-{
-  "ConnectionStrings": {
-    "DefaultConnection": "Host=localhost;Port=5432;Database=smartrag_db;Username=postgres;Password=postgres;"
-  },
-  "GeminiSettings": {
-    "ApiKey": "YOUR_GEMINI_API_KEY_HERE",
-    "EmbeddingModel": "gemini-embedding-001",
-    "ChatModel": "gemini-3.5-flash"
-  },
-  "Logging": {
-    "LogLevel": {
-      "Default": "Information",
-      "Microsoft.AspNetCore": "Warning"
+Không cần cài PostgreSQL riêng và không cần chạy ứng dụng bằng `dotnet run`.
+
+### 6.2. Tạo file môi trường
+
+Mở PowerShell tại thư mục chứa `compose.yaml` và `Dockerfile`:
+
+```powershell
+cd D:\hoclaptrinh\Source\SmartDocumentRAG.API\SmartDocumentRAG.API
+if (-not (Test-Path .env)) { Copy-Item .env.example .env }
+notepad .env
+```
+
+Nếu `.env` đã tồn tại, lệnh trên giữ nguyên file và chỉ mở nó để bạn kiểm tra hoặc bổ sung biến còn thiếu.
+
+Trong `.env`, đặt giá trị riêng cho máy của bạn:
+
+```dotenv
+POSTGRES_DB=smartdocumentrag
+POSTGRES_USER=raguser
+POSTGRES_PASSWORD=thay-bang-mat-khau-dai-va-ngau-nhien
+GEMINI_API_KEY=dan-gemini-api-key-cua-ban
+GEMINI_EMBEDDING_MODEL=gemini-embedding-001
+GEMINI_CHAT_MODEL=gemini-3.5-flash
+```
+
+`.env` chứa mật khẩu và API key, đã được Git bỏ qua; không commit file này. Chỉ commit `.env.example` làm mẫu.
+
+### 6.3. Khởi động PostgreSQL
+
+```powershell
+docker compose up -d db
+docker compose ps
+```
+
+Chờ service `db` có trạng thái `healthy` trước khi chuyển sang bước tiếp theo.
+
+### 6.4. Tạo schema database lần đầu
+
+Ứng dụng không tự chạy EF migrations khi khởi động. Cài EF Core CLI một lần nếu máy chưa có:
+
+```powershell
+dotnet tool install --global dotnet-ef --version 10.0.12
+```
+
+Đọc thông tin DB từ `.env`, tạm đặt connection string cho lệnh migration, rồi áp dụng schema:
+
+```powershell
+$envValues = @{}
+Get-Content .env | ForEach-Object {
+    if ($_ -match '^\s*([^#=]+)=(.*)$') {
+        $envValues[$Matches[1].Trim()] = $Matches[2].Trim()
     }
-  },
-  "AllowedHosts": "*"
 }
-```
 
----
-
-### 6.3. Khởi Tạo Cơ Sở Dữ Liệu
-Mở terminal tại thư mục dự án và chạy lệnh Migration:
-
-```bash
-# Cập nhật cấu trúc database PostgreSQL và khởi tạo extension pgvector
+$env:ConnectionStrings__DefaultConnection = "Host=localhost;Port=5433;Database=$($envValues['POSTGRES_DB']);Username=$($envValues['POSTGRES_USER']);Password=$($envValues['POSTGRES_PASSWORD'])"
 dotnet ef database update
+Remove-Item Env:ConnectionStrings__DefaultConnection
 ```
 
----
+Chạy lệnh tại thư mục chứa `SmartDocumentRAG.API.csproj`. Lệnh này tạo schema trong database Compose qua cổng host `5433`.
 
-### 6.4. Chạy Ứng Dụng
-```bash
-# Chạy dự án
-dotnet run
+### 6.5. Build và chạy ứng dụng web
+
+```powershell
+docker compose up -d --build web
+docker compose ps
 ```
 
-Sau khi ứng dụng khởi chạy thành công:
-- **Giao diện Web:** Truy cập `https://localhost:7080` hoặc `http://localhost:5000` (được điều hướng tới trang Đăng nhập `/Account/Login`).
-- **Bảng điều khiển Hangfire (Dashboard):** Truy cập `/hangfire` để theo dõi tiến trình chạy ngầm của các job xử lý PDF.
-- **Tài liệu Swagger API (Môi trường Dev):** Truy cập `/swagger` để kiểm tra danh sách API.
+Mở trang đăng nhập tại [http://localhost:8080/Account/Login](http://localhost:8080/Account/Login). Xem log nếu cần:
+
+```powershell
+docker compose logs -f web
+```
+
+### 6.6. Các lệnh thường dùng
+
+```powershell
+# Khởi động cả web và database sau này
+docker compose up -d
+
+# Xem trạng thái
+docker compose ps
+
+# Theo dõi log
+docker compose logs -f
+
+# Dừng container nhưng giữ dữ liệu
+docker compose stop
+
+# Xóa container và network; các named volume vẫn được giữ
+docker compose down
+```
+
+Database và file upload được lưu trong named volumes `postgres_data` và `uploads_data`. Không dùng `docker compose down -v` trừ khi muốn xóa các volume này và dữ liệu bên trong.
+
+Kết nối DBeaver từ máy host: host `localhost`, port `5433`, database/user theo `.env`. Trong connection string bên trong container, hostname DB là `db`, port `5432`.
+
+### 6.7. Chạy trên máy khác hoặc chuyển dữ liệu
+
+Trên máy khác, lấy mã nguồn có `Dockerfile`, `.dockerignore`, `compose.yaml` và `.env.example`, cài Docker Desktop, tạo `.env` riêng rồi thực hiện các bước 6.2–6.5. Database mới sẽ rỗng và cần chạy migrations như bước 6.4.
+
+Named volumes chỉ nằm trên máy đã tạo chúng; chúng không được chuyển theo Git. Nếu cần dữ liệu tài khoản/tài liệu cũ, hãy sao lưu và khôi phục PostgreSQL cùng các file upload riêng. Sao chép source code hoặc chạy Compose không tự chuyển dữ liệu từ máy cũ.
+
+Hangfire Dashboard: `/hangfire` (yêu cầu xác thực). Swagger chỉ bật khi ứng dụng chạy ở môi trường `Development`.
 
 ---
 

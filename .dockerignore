@@ -1,0 +1,18 @@
+# Build output and IDE files
+**/bin/
+**/obj/
+.vs/
+.git/
+
+# Local secrets and configuration (pass these through environment variables)
+.env
+.env.*
+appsettings.json
+appsettings.Development.json
+appsettings.example.json
+
+# User uploads and local report artifacts
+Uploads/
+*.pptx
+*.user
+*.suo

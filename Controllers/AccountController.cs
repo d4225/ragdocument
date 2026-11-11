@@ -3,6 +3,8 @@ using Microsoft.EntityFrameworkCore;
 using SmartDocumentRAG.API.Data;
 using SmartDocumentRAG.API.Models;
 
+using SmartDocumentRAG.API.ViewModels;
+
 namespace SmartDocumentRAG.API.Controllers
 {
     [Route("Account")]
@@ -78,6 +80,75 @@ namespace SmartDocumentRAG.API.Controllers
             // Đăng ký thành công -> Chuyển hướng về trang Đăng nhập
             return RedirectToAction("Login");
         }
+
+        // GET: /Account/Profile
+        [HttpGet("Profile")]
+        public async Task<IActionResult> Profile()
+        {
+            if (!Guid.TryParse(HttpContext.Session.GetString("UserId"), out var userId))
+                return RedirectToAction("Login");
+
+            var user = await _db.Users.FindAsync(userId);
+            if (user == null)
+            {
+                HttpContext.Session.Clear();
+                return RedirectToAction("Login");
+            }
+
+            return View(new AccountProfileViewModel
+            {
+                FullName = user.FullName,
+                Email = user.Email,
+                PhoneNumber = user.PhoneNumber,
+                University = user.University,
+                Address = user.Address
+            });
+        }
+
+        // POST: /Account/Profile
+        [HttpPost("Profile")]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Profile(AccountProfileViewModel model)
+        {
+            if (!Guid.TryParse(HttpContext.Session.GetString("UserId"), out var userId))
+                return RedirectToAction("Login");
+
+            var universities = GetUniversities();
+            if (!string.IsNullOrWhiteSpace(model.University) && !universities.Contains(model.University))
+                ModelState.AddModelError(nameof(model.University), "Vui lòng chọn trường đại học trong danh sách.");
+
+            var normalizedEmail = model.Email?.Trim() ?? string.Empty;
+            var emailExists = await _db.Users.AnyAsync(user => user.Id != userId && user.Email == normalizedEmail);
+            if (emailExists)
+                ModelState.AddModelError(nameof(model.Email), "Địa chỉ email này đã được tài khoản khác sử dụng.");
+
+            var user = await _db.Users.FindAsync(userId);
+            if (user == null)
+            {
+                HttpContext.Session.Clear();
+                return RedirectToAction("Login");
+            }
+
+            if (!ModelState.IsValid)
+            {
+                return View(model);
+            }
+
+            user.FullName = NormalizeOptional(model.FullName);
+            user.Email = normalizedEmail;
+            user.PhoneNumber = NormalizeOptional(model.PhoneNumber);
+            user.University = NormalizeOptional(model.University);
+            user.Address = NormalizeOptional(model.Address);
+
+            await _db.SaveChangesAsync();
+            TempData["ProfileSuccess"] = "Thông tin cá nhân đã được cập nhật.";
+            return RedirectToAction(nameof(Profile));
+        }
+
+        private static string[] GetUniversities() => ["Bưu chính", "Phenikaa", "FPT", "Bách Khoa"];
+
+        private static string? NormalizeOptional(string? value) =>
+            string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 
         // GET: /Account/Logout
         [HttpGet("Logout")]

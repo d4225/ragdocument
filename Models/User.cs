@@ -15,6 +15,18 @@ public class User
     [MaxLength(255)]
     public string Email { get; set; } = string.Empty;
 
+    [MaxLength(150)]
+    public string? FullName { get; set; }
+
+    [MaxLength(30)]
+    public string? PhoneNumber { get; set; }
+
+    [MaxLength(100)]
+    public string? University { get; set; }
+
+    [MaxLength(300)]
+    public string? Address { get; set; }
+
     [Required]
     public string PasswordHash { get; set; } = string.Empty;
 

@@ -1,0 +1,97 @@
+@model SmartDocumentRAG.API.ViewModels.AccountProfileViewModel
+
+@{
+    Layout = "~/Views/Shared/_Layout.cshtml";
+    ViewData["Title"] = "Tài khoản của tôi";
+}
+
+<style>
+    .profile-page { width:min(1080px,100%); margin:0 auto; padding:34px 28px 48px; }
+    .profile-hero { display:flex; align-items:center; gap:18px; margin-bottom:22px; padding:24px 28px; border:1px solid #E4C15D; border-radius:20px; background:linear-gradient(112deg,#12382F,#0E4A38 72%,#12614A); box-shadow:0 10px 25px rgba(18,56,47,.12); }
+    .profile-hero-icon { width:58px; height:58px; display:grid; place-items:center; flex:0 0 auto; border-radius:17px; background:#F5B52E; color:#173831; font-size:25px; }
+    .profile-kicker { margin-bottom:5px; color:#F5B52E; font-size:10px; font-weight:700; letter-spacing:1px; text-transform:uppercase; }
+    .profile-title { margin:0; color:#fff; font-size:clamp(1.5rem,3vw,2rem); font-weight:700; }
+    .profile-subtitle { margin:6px 0 0; color:rgba(255,255,255,.78); font-size:13px; }
+    .profile-card { padding:26px 28px 28px; border:1px solid #DCE9E0; border-radius:18px; background:#fff; box-shadow:0 8px 22px rgba(18,64,53,.06); }
+    .profile-section-heading { display:flex; align-items:center; gap:10px; margin:0 0 20px; color:#173831; font-size:15px; font-weight:700; }
+    .profile-section-heading i { color:#14734D; }
+    .profile-form-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:18px 20px; }
+    .profile-field { min-width:0; }
+    .profile-field.full-width { grid-column:1/-1; }
+    .profile-field label { display:block; margin-bottom:7px; color:#2C523D; font-size:12px; font-weight:700; }
+    .profile-field input, .profile-field select, .profile-field textarea { width:100%; min-height:44px; padding:10px 12px; border:1px solid #DCE9E0; border-radius:10px; outline:none; background:#fff; color:#173831; font:inherit; font-size:13px; transition:border-color .18s ease,box-shadow .18s ease; }
+    .profile-field textarea { min-height:92px; resize:vertical; }
+    .profile-field input:focus, .profile-field select:focus, .profile-field textarea:focus { border-color:#14734D; box-shadow:0 0 0 3px rgba(20,115,77,.1); }
+    .profile-field input[readonly] { background:#F7FAF8; color:#4A6855; }
+    .profile-hint { display:block; margin-top:5px; color:#718478; font-size:11px; }
+    .field-validation-error, .validation-summary-errors { color:#B42332; font-size:12px; }
+    .validation-summary-errors ul { margin:0 0 16px; padding-left:18px; }
+    .profile-success { display:flex; align-items:center; gap:9px; margin-bottom:18px; padding:11px 14px; border:1px solid #B8DCC7; border-radius:10px; background:#E8F4EB; color:#176044; font-size:13px; font-weight:600; }
+    .profile-actions { display:flex; justify-content:flex-end; gap:10px; margin-top:22px; padding-top:18px; border-top:1px solid #E8F4EB; }
+    .profile-cancel, .profile-save { min-height:42px; display:inline-flex; align-items:center; justify-content:center; gap:8px; padding:0 16px; border:0; border-radius:10px; font-size:12px; font-weight:700; text-decoration:none; cursor:pointer; }
+    .profile-cancel { border:1px solid #DCE9E0; background:#fff; color:#2C523D; }
+    .profile-save { background:#14734D; color:#fff; }
+    .profile-save:hover { background:#173831; }
+    @@media(max-width:620px) { .profile-page { padding:24px 16px 36px; } .profile-hero { align-items:flex-start; padding:20px; } .profile-form-grid { grid-template-columns:1fr; } .profile-field.full-width { grid-column:auto; } .profile-card { padding:21px 18px; } .profile-actions { flex-direction:column-reverse; } .profile-cancel,.profile-save { width:100%; } }
+</style>
+
+<div class="profile-page">
+    <header class="profile-hero">
+        <div class="profile-hero-icon"><i class="bi bi-person-vcard-fill"></i></div>
+        <div>
+            <div class="profile-kicker">Hồ sơ cá nhân</div>
+            <h1 class="profile-title font-serif-academic">Tài khoản của tôi</h1>
+            <p class="profile-subtitle">Cập nhật thông tin liên hệ và trường đại học của bạn.</p>
+        </div>
+    </header>
+
+    <section class="profile-card">
+        @if (TempData["ProfileSuccess"] is string successMessage)
+        {
+            <div class="profile-success"><i class="bi bi-check-circle-fill"></i> @successMessage</div>
+        }
+
+        <h2 class="profile-section-heading"><i class="bi bi-person-lines-fill"></i> Thông tin cá nhân</h2>
+        <form asp-controller="Account" asp-action="Profile" method="post">
+            @Html.AntiForgeryToken()
+            <div asp-validation-summary="ModelOnly"></div>
+            <div class="profile-form-grid">
+                <div class="profile-field">
+                    <label asp-for="FullName"></label>
+                    <input asp-for="FullName" autocomplete="name" placeholder="Nhập họ và tên" />
+                    <span asp-validation-for="FullName"></span>
+                </div>
+                <div class="profile-field">
+                    <label asp-for="Email"></label>
+                    <input asp-for="Email" type="email" autocomplete="email" placeholder="name@example.com" />
+                    <span asp-validation-for="Email"></span>
+                </div>
+                <div class="profile-field">
+                    <label asp-for="PhoneNumber"></label>
+                    <input asp-for="PhoneNumber" type="tel" autocomplete="tel" placeholder="Nhập số điện thoại" />
+                    <span asp-validation-for="PhoneNumber"></span>
+                </div>
+                <div class="profile-field">
+                    <label asp-for="University"></label>
+                    <select asp-for="University">
+                        <option value="">Chọn trường đại học</option>
+                        <option value="Bưu chính" selected="@(Model.University == "Bưu chính")">Bưu chính</option>
+                        <option value="Phenikaa" selected="@(Model.University == "Phenikaa")">Phenikaa</option>
+                        <option value="FPT" selected="@(Model.University == "FPT")">FPT</option>
+                        <option value="Bách Khoa" selected="@(Model.University == "Bách Khoa")">Bách Khoa</option>
+                    </select>
+                    <span asp-validation-for="University"></span>
+                </div>
+                <div class="profile-field full-width">
+                    <label asp-for="Address"></label>
+                    <textarea asp-for="Address" autocomplete="street-address" placeholder="Nhập địa chỉ của bạn"></textarea>
+                    <span asp-validation-for="Address"></span>
+                </div>
+            </div>
+            <div class="profile-actions">
+                <a href="/Document" class="profile-cancel">Quay lại</a>
+                <button type="submit" class="profile-save"><i class="bi bi-check2-circle"></i> Lưu thay đổi</button>
+            </div>
+        </form>
+    </section>
+</div>

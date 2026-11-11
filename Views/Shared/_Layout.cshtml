@@ -496,6 +496,23 @@
                 transition: all 0.22s ease;
             }
 
+            .btn-drawer-profile {
+                display: flex;
+                align-items: center;
+                gap: 12px;
+                padding: 10px 16px;
+                border: 1px solid rgba(245, 181, 46, 0.24);
+                border-radius: 12px;
+                color: rgba(255, 255, 255, 0.82);
+                font-size: 13px;
+                font-weight: 600;
+                text-decoration: none;
+                transition: all 0.2s ease;
+            }
+
+            .btn-drawer-profile i { color: var(--color-amber); font-size: 17px; }
+            .btn-drawer-profile:hover { background: rgba(245, 181, 46, 0.12); color: var(--color-amber); transform: translateX(3px); }
+
                 .btn-drawer-logout i {
                     font-size: 18px;
                     transition: transform 0.2s ease;
@@ -692,6 +709,11 @@
                     <div class="user-role-sub">Thành viên thư viện</div>
                 </div>
             </div>
+
+            <a href="/Account/Profile" class="btn-drawer-profile" title="Cập nhật thông tin cá nhân">
+                <i class="bi bi-person-gear"></i>
+                <span>Tài khoản của tôi</span>
+            </a>
 
             <!-- MỤC 5: ĐĂNG XUẤT Ở DƯỚI CÙNG -->
             <a href="/Account/Logout" class="btn-drawer-logout" title="Đăng xuất khỏi hệ thống">
